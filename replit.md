@@ -87,7 +87,16 @@ A production-grade Admin Panel platform with:
 - `GET /api/v1/audit-logs` - List audit logs
 - `GET /api/v1/dashboard/stats` - Dashboard statistics
 
+## Environment Variables
+- `DATABASE_URL` - PostgreSQL connection string
+- `SESSION_SECRET` - JWT signing secret
+- `ALLOWED_ORIGINS` - Comma-separated list of allowed CORS origins (default: "*")
+- `APP_ENV` - Environment (development/production)
+
 ## Recent Changes
+- Dec 30, 2025: Added RBAC permission middleware to all protected routes
+- Dec 30, 2025: Improved CORS configuration with configurable origins
+- Dec 30, 2025: Fixed Next.js allowedDevOrigins for Replit environment
 - Initial setup with complete backend and frontend
 - Database schema with indexes for performance
 - JWT authentication with refresh tokens
