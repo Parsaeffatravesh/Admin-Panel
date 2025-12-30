@@ -65,6 +65,7 @@ func main() {
 
         r.Use(chimiddleware.RequestID)
         r.Use(chimiddleware.RealIP)
+        r.Use(chimiddleware.Compress(5))
         r.Use(middleware.RequestLogger(logger))
         r.Use(chimiddleware.Recoverer)
         r.Use(middleware.SecurityHeaders)

@@ -52,10 +52,10 @@ func Load() *Config {
                 },
                 Database: DatabaseConfig{
                         URL:             getEnv("DATABASE_URL", ""),
-                        MaxConns:        int32(getIntEnv("DB_MAX_CONNS", 25)),
-                        MinConns:        int32(getIntEnv("DB_MIN_CONNS", 5)),
-                        MaxConnLifetime: getDurationEnv("DB_MAX_CONN_LIFETIME", time.Hour),
-                        MaxConnIdleTime: getDurationEnv("DB_MAX_CONN_IDLE_TIME", 30*time.Minute),
+                        MaxConns:        int32(getIntEnv("DB_MAX_CONNS", 50)),
+                        MinConns:        int32(getIntEnv("DB_MIN_CONNS", 10)),
+                        MaxConnLifetime: getDurationEnv("DB_MAX_CONN_LIFETIME", 30*time.Minute),
+                        MaxConnIdleTime: getDurationEnv("DB_MAX_CONN_IDLE_TIME", 10*time.Minute),
                 },
                 JWT: JWTConfig{
                         Secret:          getEnv("SESSION_SECRET", "default-secret-change-me"),
