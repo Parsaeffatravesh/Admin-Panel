@@ -223,3 +223,44 @@ export const auditApi = {
 export const dashboardApi = {
   getStats: () => api.get<DashboardStats>('/api/v1/dashboard/stats'),
 };
+
+export interface FeatureFlag {
+  id: string;
+  tenant_id: string;
+  key: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const featureFlagsApi = {
+  list: (params?: { page?: number; per_page?: number; search?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.per_page) searchParams.set('per_page', params.per_page.toString());
+    if (params?.search) searchParams.set('search', params.search);
+    return api.get<PaginatedResponse<FeatureFlag>>(`/api/v1/feature-flags?${searchParams}`);
+  },
+  get: (id: string) => api.get<FeatureFlag>(`/api/v1/feature-flags/${id}`),
+  create: (data: { key: string; name: string; description?: string; enabled?: boolean }) =>
+    api.post<FeatureFlag>('/api/v1/feature-flags', data),
+  update: (id: string, data: Partial<{ name: string; description: string; enabled: boolean }>) =>
+    api.put<FeatureFlag>(`/api/v1/feature-flags/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/feature-flags/${id}`),
+  toggle: (id: string) => api.post<FeatureFlag>(`/api/v1/feature-flags/${id}/toggle`),
+};
+
+export const adminApi = {
+  setAdmin: (userId: string, data: { is_admin: boolean; admin_password?: string }) =>
+    api.post(`/api/v1/users/${userId}/set-admin`, data),
+  getAdminStatus: (userId: string) =>
+    api.get<{ is_admin: boolean }>(`/api/v1/users/${userId}/admin-status`),
+};
+
+export const getExportUrl = (endpoint: string) => {
+  const token = localStorage.getItem('access_token');
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  return `${baseUrl}${endpoint}?token=${token}`;
+};

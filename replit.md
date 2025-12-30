@@ -34,9 +34,10 @@ A production-grade Admin Panel platform with:
 
 ### Authentication
 - JWT-based authentication with access/refresh tokens
-- Secure password hashing with bcrypt
+- Secure password hashing with Argon2id (new admin passwords) and bcrypt (backward compatible)
 - Rate limiting on auth endpoints
 - Session management
+- Separate admin authentication table for enhanced security
 
 ### Authorization (RBAC)
 - Role-based access control
@@ -45,10 +46,11 @@ A production-grade Admin Panel platform with:
 
 ### Admin Features
 - Dashboard with KPIs
-- User management (CRUD, search, status, password reset)
+- User management (CRUD, search, status, password reset, set-to-admin)
 - Role & Permission management
-- Audit logs (immutable, searchable)
-- Settings/Feature flags
+- Audit logs (immutable, searchable, CSV export)
+- Feature flags management (CRUD, toggle)
+- Settings page with dynamic feature flags UI
 
 ### Technical Highlights
 - **Backend**: chi router, pgx with connection pooling, prepared statements
@@ -85,7 +87,20 @@ A production-grade Admin Panel platform with:
 
 ### Audit & Dashboard
 - `GET /api/v1/audit-logs` - List audit logs
+- `GET /api/v1/audit-logs/export` - Export audit logs to CSV
 - `GET /api/v1/dashboard/stats` - Dashboard statistics
+
+### Feature Flags
+- `GET /api/v1/feature-flags` - List feature flags
+- `POST /api/v1/feature-flags` - Create feature flag
+- `GET /api/v1/feature-flags/:id` - Get feature flag
+- `PUT /api/v1/feature-flags/:id` - Update feature flag
+- `DELETE /api/v1/feature-flags/:id` - Delete feature flag
+- `POST /api/v1/feature-flags/:id/toggle` - Toggle feature flag
+
+### Admin Management
+- `POST /api/v1/users/:id/set-admin` - Set/unset user as admin
+- `GET /api/v1/users/:id/admin-status` - Get admin status
 
 ## Environment Variables
 - `DATABASE_URL` - PostgreSQL connection string
@@ -94,6 +109,11 @@ A production-grade Admin Panel platform with:
 - `APP_ENV` - Environment (development/production)
 
 ## Recent Changes
+- Dec 30, 2025: Added CSV export endpoint for audit logs
+- Dec 30, 2025: Implemented feature flags API and frontend management UI
+- Dec 30, 2025: Added admin authentication table with Argon2id password hashing
+- Dec 30, 2025: Added set-to-admin endpoint with password setting
+- Dec 30, 2025: Updated Settings page with dynamic feature flags
 - Dec 30, 2025: Added RBAC permission middleware to all protected routes
 - Dec 30, 2025: Improved CORS configuration with configurable origins
 - Dec 30, 2025: Fixed Next.js allowedDevOrigins for Replit environment

@@ -44,6 +44,8 @@ func main() {
         roleRepo := repository.NewRoleRepository(db)
         sessionRepo := repository.NewSessionRepository(db)
         auditRepo := repository.NewAuditLogRepository(db)
+        adminAuthRepo := repository.NewAdminAuthRepository(db)
+        featureFlagRepo := repository.NewFeatureFlagRepository(db)
 
         authService := services.NewAuthService(userRepo, roleRepo, sessionRepo, auditRepo, cfg.JWT)
         userService := services.NewUserService(userRepo, roleRepo, auditRepo)
@@ -58,6 +60,8 @@ func main() {
         roleHandler := handlers.NewRoleHandler(roleService, validate)
         auditHandler := handlers.NewAuditHandler(auditService)
         dashboardHandler := handlers.NewDashboardHandler(dashboardService)
+        adminHandler := handlers.NewAdminHandler(adminAuthRepo, auditRepo, validate)
+        featureFlagHandler := handlers.NewFeatureFlagHandler(featureFlagRepo, auditRepo, validate)
 
         authMiddleware := middleware.NewAuthMiddleware(authService, logger)
 
@@ -112,6 +116,17 @@ func main() {
                                 r.With(authMiddleware.RequirePermission("users", "delete")).Delete("/{id}", userHandler.Delete)
                                 r.With(authMiddleware.RequirePermission("users", "update")).Post("/{id}/reset-password", userHandler.ResetPassword)
                                 r.With(authMiddleware.RequirePermission("users", "read")).Get("/{id}/roles", userHandler.GetRoles)
+                                r.With(authMiddleware.RequirePermission("admin", "manage")).Post("/{id}/set-admin", adminHandler.SetAdmin)
+                                r.With(authMiddleware.RequirePermission("users", "read")).Get("/{id}/admin-status", adminHandler.GetAdminStatus)
+                        })
+
+                        r.Route("/feature-flags", func(r chi.Router) {
+                                r.With(authMiddleware.RequirePermission("feature_flags", "read")).Get("/", featureFlagHandler.List)
+                                r.With(authMiddleware.RequirePermission("feature_flags", "create")).Post("/", featureFlagHandler.Create)
+                                r.With(authMiddleware.RequirePermission("feature_flags", "read")).Get("/{id}", featureFlagHandler.Get)
+                                r.With(authMiddleware.RequirePermission("feature_flags", "update")).Put("/{id}", featureFlagHandler.Update)
+                                r.With(authMiddleware.RequirePermission("feature_flags", "delete")).Delete("/{id}", featureFlagHandler.Delete)
+                                r.With(authMiddleware.RequirePermission("feature_flags", "update")).Post("/{id}/toggle", featureFlagHandler.Toggle)
                         })
 
                         r.Route("/roles", func(r chi.Router) {
@@ -129,6 +144,7 @@ func main() {
 
                         r.Route("/audit-logs", func(r chi.Router) {
                                 r.With(authMiddleware.RequirePermission("audit_logs", "read")).Get("/", auditHandler.List)
+                                r.With(authMiddleware.RequirePermission("audit_logs", "read")).Get("/export", auditHandler.Export)
                         })
                 })
         })
