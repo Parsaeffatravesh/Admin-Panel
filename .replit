@@ -1,2 +1,6 @@
+modules = ["go-1.24", "nodejs-20", "postgresql-16"]
 [agent]
 expertMode = true
+
+[nix]
+channel = "stable-25_05"
