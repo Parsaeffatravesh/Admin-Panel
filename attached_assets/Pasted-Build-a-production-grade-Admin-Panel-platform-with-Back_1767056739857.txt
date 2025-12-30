@@ -1,0 +1,88 @@
+Build a production-grade Admin Panel platform with:
+- Backend: Go (Golang) only
+- Database: PostgreSQL
+- Frontend: Next.js (App Router) + Tailwind CSS
+Primary objective: maximum performance, minimal latency, and excellent developer ergonomics.
+
+OUTPUT REQUIREMENTS
+1) Provide a complete architecture plan (high-level + component diagram in text).
+2) Provide a detailed folder structure for both backend and frontend.
+3) Provide DB schema (Postgres DDL) with indexes and rationale.
+4) Provide API design (REST or gRPC), with endpoints, request/response examples, auth flows, and error format.
+5) Provide key code scaffolding (critical files) for:
+   - Go server bootstrap, routing, middleware, config, logging, DB, migrations
+   - Auth (RBAC), sessions/JWT, audit logging
+   - Users, roles, permissions, admin CRUD pattern, pagination/filtering/sorting
+   - Next.js pages, layouts, auth guards, data fetching, table components, forms, validation
+6) Provide a performance checklist, load strategy, caching strategy, and observability plan.
+
+FUNCTIONAL REQUIREMENTS
+- Authentication: secure login (email+password) + optional 2FA later
+- Authorization: RBAC with roles and permissions (fine-grained)
+- Admin features:
+  - Dashboard KPIs (fast queries, aggregated)
+  - User management (CRUD, search, status, reset password)
+  - Role & Permission management (CRUD)
+  - Audit Logs (immutable, searchable, export)
+  - Settings (feature flags, configuration)
+  - Notification center (optional)
+- Tables with:
+  - server-side pagination, filtering, sorting
+  - debounced search
+  - column visibility and saved views (optional)
+- Forms with:
+  - validation, optimistic UI when safe
+  - accessible components
+- Multi-tenant ready (design for org_id/tenant_id) even if initially single-tenant
+
+NON-FUNCTIONAL / PERFORMANCE REQUIREMENTS
+- Backend must be ultra-fast:
+  - Use pgx (not database/sql) + prepared statements where appropriate
+  - Connection pooling tuned
+  - Proper indexes, explain plan awareness
+  - Cursor-based pagination for large datasets
+  - Avoid N+1 queries
+  - Use JSON serialization efficiently
+- Frontend must be snappy:
+  - Next.js App Router + React Server Components where beneficial
+  - Prefer server-side data fetching for admin tables when appropriate
+  - Use caching and revalidation strategy carefully
+  - Use route-level loading skeletons
+  - Minimal bundle size, dynamic imports for heavy admin widgets
+- Add caching where sensible:
+  - In-memory cache for hot lookups (permissions, feature flags)
+  - Optional Redis (describe as optional, but do not require it unless justified)
+- Observability:
+  - Structured logs (JSON), request IDs, tracing hooks
+  - Metrics (p95, p99 latencies), slow query logs
+- Security:
+  - CSRF/XSS protections, secure cookies if sessions used
+  - rate limiting on auth routes
+  - secrets management, env config
+  - password hashing Argon2id or bcrypt with strong params
+
+TECHNICAL CHOICES (DEFAULTS)
+Backend:
+- Router: chi or fiber (choose based on speed and clarity; justify)
+- DB: pgxpool
+- Migrations: goose or golang-migrate
+- Validation: go-playground/validator
+- Config: env + config struct
+Frontend:
+- Next.js 14+ App Router
+- Tailwind + a lightweight component approach (Headless UI or shadcn/ui)
+- Data fetching: fetch + server actions or TanStack Query (choose and justify)
+- Form validation: zod + react-hook-form
+
+DELIVERABLES
+- Step-by-step setup instructions (local dev + production)
+- Docker compose for Postgres (+ optional Redis)
+- Security hardening checklist
+- Performance tuning checklist
+- Minimal viable implementation first, then iterative enhancements
+
+CONSTRAINTS
+- Keep it simple and maintainable, but do not sacrifice speed.
+- Avoid overengineering microservices; start as a modular monolith.
+- Provide code that compiles and runs (no pseudo-code for critical paths).
+- Be explicit about decisions and tradeoffs.
