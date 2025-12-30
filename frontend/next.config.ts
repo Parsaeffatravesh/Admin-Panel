@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: [
+    "*.janeway.replit.dev",
+    "*.replit.dev",
+    "127.0.0.1",
+    "localhost",
+  ],
   async rewrites() {
     return [
       {
