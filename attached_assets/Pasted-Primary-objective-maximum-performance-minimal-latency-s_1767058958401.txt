@@ -1,0 +1,213 @@
+Primary objective: maximum performance, minimal latency, smooth UI.
+
+HARD REQUIREMENT: DELIVER COMPLETE IMPLEMENTATION (not pseudo-code for core paths).
+Include: architecture, DB schema + migrations, API design, auth/RBAC, UI screens, table/filter/sort, and production-ready scaffolding.
+
+========================
+CORE BUSINESS FLOWS
+========================
+
+A) USER REGISTRATION + "SET TO ADMIN" FLOW
+We have users who sign up. For each user registration, there is a "Set to Admin" tick.
+
+SECURITY CONSTRAINT:
+- The "Set to Admin" tick must NOT be available on a public signup page.
+- It must be available ONLY in one of these controlled contexts:
+  1) Internal admin provisioning UI (an existing Super Admin creates/edits a user), OR
+  2) A private registration route protected by an Admin Invite Token, OR
+  3) An allowlist rule (e.g., only specific domains/emails) + server-side enforced.
+- The backend must enforce this rule even if the frontend is bypassed.
+
+B) ADMIN ACTIVATION + PASSWORD SETTING
+When an admin activates "Set to Admin" for a user:
+- The UI must immediately show:
+  - A password input field (with strength indicator)
+  - A "Save" button
+  - Optional: "Generate strong password" button (recommended)
+- When clicking Save:
+  - Backend must store ONLY a secure password hash (Argon2id preferred; bcrypt acceptable with strong cost).
+  - User becomes eligible to log in to the Admin Panel using:
+    - Email
+    - The password that was just set
+- Password is never logged or returned. Avoid sending password via email; if needed, send a one-time reset link instead.
+
+C) ADMIN LOGIN
+- Admin login page: email + password
+- Only users who are admin-enabled AND have an admin password set can log in.
+- On login, issue session (secure cookie) or JWT; prefer secure-cookie sessions for admin.
+- Rate-limit auth endpoints and add account lockout/backoff.
+
+D) RBAC
+- Minimum roles: super_admin, admin, viewer
+- Permissions: fine-grained, stored in DB; cached in-memory for hot checks
+- Audit log every privileged action (who/when/what)
+
+========================
+ADMIN PANEL FEATURES (COMPLETE)
+========================
+1) Dashboard
+- Fast aggregated KPIs
+- Use materialized view or optimized aggregation queries + caching
+- Show p95 latency, error rate (if metrics available)
+
+2) Users
+- List users with server-side pagination, filtering, sorting
+- Search by email/name/id (debounced)
+- Row actions: view, edit, deactivate/activate
+- "Set to Admin" toggle:
+  - When toggled ON -> show password input + Save
+  - When toggled OFF -> revoke admin access immediately; optionally clear admin_password_hash
+
+3) Roles & Permissions
+- CRUD roles
+- Assign permissions to roles
+- Assign roles to users
+
+4) Audit Logs
+- Append-only audit table
+- Searchable, filterable
+- Export (CSV) endpoint
+- Show detail drawer per event
+
+5) Settings / Feature Flags
+- CRUD settings and feature flags
+- Cache flags in-memory with short TTL
+- Protect by permission
+
+========================
+DATABASE REQUIREMENTS (Postgres)
+========================
+Provide complete DDL + migrations, indexes, and rationale.
+Suggested tables (you can adjust but must meet requirements):
+- users (id, email unique, name, status, created_at, updated_at)
+- user_auth (user_id, password_hash for normal app login OPTIONAL)
+- admin_auth (user_id PK, admin_password_hash, enabled_at, updated_at)
+- roles (id, name unique)
+- permissions (id, key unique, description)
+- role_permissions (role_id, permission_id)
+- user_roles (user_id, role_id)
+- audit_logs (id, actor_user_id, action, entity_type, entity_id, metadata jsonb, created_at)
+
+Indexes:
+- users(email), users(created_at)
+- audit_logs(created_at), audit_logs(actor_user_id), audit_logs(entity_type, entity_id)
+- GIN index on audit_logs(metadata) if needed for filtering
+
+========================
+BACKEND REQUIREMENTS (GO)
+========================
+Performance-first Go backend:
+- Use pgx + pgxpool (not database/sql)
+- Prepared statements where appropriate
+- Proper pool sizing, timeouts, context cancellation
+- JSON encoding optimized; avoid allocations where possible
+- Strict input validation
+- Consistent error format: { "error": { "code": "...", "message": "...", "details": ... } }
+
+API Style: REST (simple) with clear versioning (/api/v1).
+Must include request/response examples for every endpoint.
+
+Critical endpoints:
+Auth:
+- POST /api/v1/admin/auth/login
+- POST /api/v1/admin/auth/logout
+- GET  /api/v1/admin/auth/me
+
+Users:
+- GET    /api/v1/admin/users?cursor=&limit=&q=&sort=
+- GET    /api/v1/admin/users/{id}
+- POST   /api/v1/admin/users   (internal provisioning)
+- PATCH  /api/v1/admin/users/{id}
+- POST   /api/v1/admin/users/{id}/set-admin  { "enabled": true, "password": "..." }
+- POST   /api/v1/admin/users/{id}/unset-admin
+
+RBAC:
+- CRUD roles, permissions, assignments
+
+Audit:
+- GET /api/v1/admin/audit-logs?cursor=&limit=&q=&filters=
+- GET /api/v1/admin/audit-logs/{id}
+- GET /api/v1/admin/audit-logs/export (CSV)
+
+Security:
+- Argon2id hashing recommended
+- Rate limiting on auth routes
+- CSRF protection if cookie sessions
+- Secure cookie flags: HttpOnly, Secure, SameSite=Strict/Lax
+- Request IDs, structured logging, tracing hooks
+
+========================
+FRONTEND REQUIREMENTS (NEXT.JS + TAILWIND) — MUST BE FAST & SMOOTH
+========================
+Goal: extremely responsive admin UI.
+Must implement:
+- Next.js App Router
+- RSC where beneficial (layout, shell, initial data)
+- Streaming + route-level loading skeletons
+- Table virtualization for large lists (react-virtual)
+- TanStack Table for grid + server-driven pagination
+- Debounced search (150–250ms), cancel in-flight requests
+- Prefetch common routes; optimistic UI for safe actions
+- Minimal bundle: dynamic import heavy components (charts, editors)
+- Avoid unnecessary re-renders:
+  - memoize row renderers
+  - stable callbacks
+  - keep state local
+- Smooth UX:
+  - skeleton loaders (not spinners)
+  - transitions without jank
+  - show toasts for actions
+- Caching strategy:
+  - Use fetch caching/revalidate for RSC
+  - For client data, choose one:
+    - TanStack Query with staleTime + suspense, OR
+    - server actions + revalidatePath
+  Pick ONE and justify.
+
+Required Screens:
+- /admin/login
+- /admin (dashboard)
+- /admin/users (list + virtualization)
+- /admin/users/[id] (details + role assignment + Set to Admin + password + Save)
+- /admin/roles
+- /admin/permissions
+- /admin/audit-logs
+- /admin/settings
+
+Set-to-admin UX:
+- In user detail page and also in user row quick action:
+  - Toggle "Set to Admin"
+  - If enabled: reveal password input + "Save"
+  - After save: show success; user can log in with email+admin password
+  - If disable: revoke access immediately, reflect in UI
+
+========================
+OBSERVABILITY & PERFORMANCE DELIVERABLES
+========================
+- Metrics: p50/p95/p99 latency, DB query time, pool usage
+- Tracing-ready middleware
+- Slow query logging
+- Load testing plan + baseline targets:
+  - Admin list endpoint p95 < 200ms on warm cache (local benchmarks)
+  - Dashboard p95 < 300ms with optimized queries/materialized view
+- Provide a performance tuning checklist for:
+  - Postgres indexes + EXPLAIN
+  - pgxpool config
+  - Next.js caching and bundle splitting
+
+========================
+DELIVERABLES
+========================
+1) Architecture plan + text diagram
+2) Full folder structures (backend/frontend)
+3) Postgres DDL + migrations
+4) API spec with examples
+5) Key code scaffolding (compilable) for both sides
+6) Docker compose (Postgres + optional Redis as OPTIONAL)
+7) Step-by-step run instructions (dev + prod)
+8) Security hardening checklist
+
+CONSTRAINTS
+- Modular monolith (no microservices)
+- Keep code maintainable without sacrificing speed
+- No pseudo-code for authentication, RBAC, user listing, set-admin password, and audit logging.
