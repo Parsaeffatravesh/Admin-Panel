@@ -12,8 +12,6 @@ export default async function DashboardLayout({
   const accessToken = cookieStore.get('access_token')?.value;
 
   if (!accessToken) {
-    cookieStore.delete('access_token');
-    cookieStore.delete('refresh_token');
     redirect('/login');
   }
 
@@ -31,13 +29,9 @@ export default async function DashboardLayout({
     });
 
     if (!response.ok) {
-      cookieStore.delete('access_token');
-      cookieStore.delete('refresh_token');
       redirect('/login');
     }
   } catch {
-    cookieStore.delete('access_token');
-    cookieStore.delete('refresh_token');
     redirect('/login');
   }
 
