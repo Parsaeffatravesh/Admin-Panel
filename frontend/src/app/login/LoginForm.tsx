@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useI18n, Language } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Copy, Check, Eye, EyeOff } from 'lucide-react';
+import { ApiError } from '@/lib/api';
 
 const languages: { code: Language; label: string; flag: string }[] = [
   { code: 'en', label: 'EN', flag: '🇺🇸' },
@@ -25,6 +26,12 @@ export default function LoginForm() {
   const [copiedPassword, setCopiedPassword] = useState(false);
   const { login } = useAuth();
   const { t, language, setLanguage, mounted } = useI18n();
+  const invalidCredentialsMessage =
+    language === 'fa' ? 'نام کاربری یا رمز عبور اشتباه' : 'Invalid email or password';
+  const generalErrorMessage =
+    language === 'fa'
+      ? 'مشکلی پیش آمد. لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.'
+      : 'Something went wrong. Please try again or contact support.';
 
   const copyToClipboard = async (text: string, type: 'email' | 'password') => {
     try {
@@ -53,7 +60,11 @@ export default function LoginForm() {
       toast.success(language === 'fa' ? 'ورود موفق' : 'Logged in successfully');
     } catch (err) {
       console.error('Login error details:', err);
-      const message = err instanceof Error ? err.message : (language === 'fa' ? 'ورود ناموفق' : 'Login failed');
+      const isUnauthorized =
+        err instanceof ApiError
+          ? err.status === 401
+          : err instanceof Error && err.message.includes('Invalid email or password');
+      const message = isUnauthorized ? invalidCredentialsMessage : generalErrorMessage;
       setError(message);
       toast.error(message);
     } finally {
@@ -203,7 +214,11 @@ export default function LoginForm() {
                       setIsLoading(true);
                       await login(e, p);
                     } catch (err) {
-                      const message = err instanceof Error ? err.message : (language === 'fa' ? 'ورود ناموفق' : 'Login failed');
+                      const isUnauthorized =
+                        err instanceof ApiError
+                          ? err.status === 401
+                          : err instanceof Error && err.message.includes('Invalid email or password');
+                      const message = isUnauthorized ? invalidCredentialsMessage : generalErrorMessage;
                       setError(message);
                     } finally {
                       setIsLoading(false);
