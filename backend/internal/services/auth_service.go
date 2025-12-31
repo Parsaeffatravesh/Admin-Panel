@@ -83,22 +83,25 @@ func (s *AuthService) Login(ctx context.Context, req *LoginRequest, ipAddress, u
         // Demo account logic
         if email == "admin@example.com" && (req.Password == "password123" || req.Password == "Admin123!") {
                 now := time.Now()
+                user := &models.User{
+                        ID:        uuid.MustParse("00000000-0000-0000-0000-000000000000"),
+                        TenantID:  uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+                        Email:     "admin@example.com",
+                        FirstName: "Demo",
+                        LastName:  "Admin",
+                        Status:    "active",
+                        CreatedAt: now,
+                        UpdatedAt: now,
+                }
+
+                tokens, err := s.generateTokens(user)
+                if err != nil {
+                        return nil, err
+                }
+
                 return &LoginResponse{
-                        User: &models.User{
-                                ID:        uuid.MustParse("00000000-0000-0000-0000-000000000000"),
-                                TenantID:  uuid.MustParse("00000000-0000-0000-0000-000000000001"),
-                                Email:     "admin@example.com",
-                                FirstName: "Demo",
-                                LastName:  "Admin",
-                                Status:    "active",
-                                CreatedAt: now,
-                                UpdatedAt: now,
-                        },
-                        Tokens: &AuthTokens{
-                                AccessToken:  "demo-access-token",
-                                RefreshToken: "demo-refresh-token",
-                                ExpiresIn:    3600,
-                        },
+                        User:   user,
+                        Tokens: tokens,
                 }, nil
         }
 
