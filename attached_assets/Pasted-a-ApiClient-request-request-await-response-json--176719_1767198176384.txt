@@ -1,0 +1,218 @@
+a) مقاوم‌سازی ApiClient.request
+
+مشکل فعلی: کد فعلی request مستقیماً await response.json() می‌کند؛ اگر پاسخ متن باشد یا HTML، پارس JSON شکست می‌خورد و همان خطای Unexpected token/Failed to parse JSON response می‌آید. (مکان: frontend/src/lib/api.ts) 
+
+api
+
+راه‌حل (کد): این نسخه را جایگزین بدنه‌ی request کنید — ابتدا content-type را چک کن، اگر JSON بود پارس کن، وگرنه متن را خوانده و خطای با معنی بده:
+
+// frontend/src/lib/api.ts  (جایگزین بدنه‌ی request)
+const response = await fetch(`${this.baseUrl}${endpoint}`, {
+  ...options,
+  headers,
+  credentials: 'include',
+});
+
+const contentType = response.headers.get('content-type') || '';
+
+if (contentType.includes('application/json')) {
+  try {
+    const data: ApiResponse<T> = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error?.message || `Server returned ${response.status}`);
+    }
+    return data.data as T;
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? `Failed to parse JSON response: ${err.message}`
+        : 'Failed to parse JSON response'
+    );
+  }
+} else {
+  const text = await response.text();
+  throw new Error(`Server returned ${response.status}: ${text}`);
+}
+
+
+نتیجه: فرانت‌اند دیگر crash نمی‌کند و پیام خطای انسانی/قابل‌فهمی نمایش می‌دهد (مثلاً Server returned 401: Invalid email or password).
+
+b) ذخیره و مدیریت توکن بعد از لاگین
+
+مشکل فعلی: در AuthProvider.login توکن‌ها ذخیره نمی‌شدند (فقط user ذخیره می‌شد) و ApiClient دنبال access_token در localStorage می‌گشت. بنابراین پس از لاگین حتی اگر موفق بود توکن وجود نداشت. (مکان: frontend/src/lib/auth.tsx) 
+
+auth
+
+تغییر لازم (کد):
+
+// frontend/src/lib/auth.tsx
+const login = async (email: string, password: string) => {
+  const response: LoginResponse = await authApi.login(email, password);
+
+  if (response.tokens) {
+    localStorage.setItem('access_token', response.tokens.access_token);
+    localStorage.setItem('refresh_token', response.tokens.refresh_token);
+    localStorage.setItem('token_expires_at', String(Date.now() + (response.tokens.expires_in || 0) * 1000));
+  }
+
+  localStorage.setItem('user', JSON.stringify(response.user));
+  setUser(response.user);
+  window.location.href = '/dashboard';
+};
+
+
+بهبودهای پیشنهادی دیگر:
+
+استفاده از refresh endpoint برای رفرش خودکار توکن (اضافه کردن logic در ApiClient یا در یک hook برای refresh قبل از expire).
+
+امنیت: در تولید بهتر است توکن‌های refresh را در HttpOnly secure cookie قرار دهید تا XSS نتواند به آن دسترسی پیدا کند. (توضیح کامل پایین‌تر)
+
+c) UX دکمه‌ی Demo
+
+در LoginForm دکمه‌های demo فعلاً فقط copy می‌کنند. بهتر است دکمه‌ای برای «پر کردن خودکار» و/یا «ورود سریع با دمو» اضافه کنید، و ایمیل را trim().toLowerCase() بفرستید. (مکان: frontend/src/app/login/LoginForm.tsx) 
+
+LoginForm
+
+نمونه کد برای دکمه‌ی «Quick Sign in with Demo» که فیلدها را پر و مستقیماً لاگین می‌کند:
+
+<button type="button" onClick={async () => {
+  const e = 'admin@example.com';
+  const p = 'Admin123!';
+  setEmail(e);
+  setPassword(p);
+  try {
+    setIsLoading(true);
+    await login(e.trim().toLowerCase(), p);
+  } finally {
+    setIsLoading(false);
+  }
+}}>
+  Quick Sign in with Demo
+</button>
+
+۲) تغییرات ضروری در بک‌اند (Go) — بهترین شکل ممکن
+
+هدف اصلی: «همیشه JSON برگردون» + «موازی‌سازی منطق لاگین با اصول امنیتی» + «وجود کاربر دمو تضمینی».
+
+a) قالب استاندارد پاسخ‌ها
+
+تعریف یک قالب کلی پاسخ:
+
+// موفقیت
+{ "success": true, "data": { ... } }
+
+// خطا
+{ "success": false, "error": { "code": "invalid_credentials", "message": "Invalid email or password" } }
+
+
+روی همه‌ی پاسخ‌ها حتماً header Content-Type: application/json ست شود. حتی در حالت panic/500، باید JSON برگردانده شود.
+
+b) middleware برای recover و خطای کلی
+
+در سرور Go از middleware ای استفاده کنید که panicها رو بگیره و JSON با یک message عمومی ارسال کنه:
+
+func recoverMiddleware(next http.Handler) http.Handler {
+  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    defer func() {
+      if rec := recover(); rec != nil {
+        log.Printf("panic: %v\n%s", rec, debug.Stack())
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]interface{}{
+          "success": false,
+          "error": map[string]string{"message":"internal server error"},
+        })
+      }
+    }()
+    next.ServeHTTP(w, r)
+  })
+}
+
+c) Handler لاگین — نمونه امن و کامل
+
+نمونه پیاده‌سازی برای endpoint POST /api/v1/auth/login (pseudo/real Go):
+
+type loginReq struct {
+  Email    string `json:"email"`
+  Password string `json:"password"`
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+  w.Header().Set("Content-Type", "application/json")
+
+  var req loginReq
+  if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+    w.WriteHeader(http.StatusBadRequest)
+    json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": map[string]string{"message":"invalid request"}})
+    return
+  }
+
+  email := strings.ToLower(strings.TrimSpace(req.Email))
+  user, err := store.FindUserByEmail(email) // تابعی که DB رو query می‌کنه
+  if err == sql.ErrNoRows {
+    w.WriteHeader(http.StatusUnauthorized)
+    json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": map[string]string{"code":"invalid_credentials","message":"Invalid email or password"}})
+    return
+  } else if err != nil {
+    log.Printf("db error: %v", err)
+    w.WriteHeader(http.StatusInternalServerError)
+    json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": map[string]string{"message":"internal server error"}})
+    return
+  }
+
+  // مقایسه‌ی bcrypt
+  if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
+    w.WriteHeader(http.StatusUnauthorized)
+    json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": map[string]string{"code":"invalid_credentials","message":"Invalid email or password"}})
+    return
+  }
+
+  // تولید توکن‌ها (JWT یا هر روش دیگری)
+  tokens, err := generateTokens(user)
+  if err != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+    json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": map[string]string{"message":"internal server error"}})
+    return
+  }
+
+  // در اینجا می تونید refresh token رو در HttpOnly cookie بذارید یا به صورت JSON برگردونید
+  w.WriteHeader(http.StatusOK)
+  json.NewEncoder(w).Encode(map[string]interface{}{
+    "success": true,
+    "data": map[string]interface{}{
+      "user": map[string]interface{}{"id": user.ID, "email": user.Email},
+      "tokens": map[string]interface{}{"access_token": tokens.Access, "refresh_token": tokens.Refresh, "expires_in": tokens.ExpiresIn},
+    },
+  })
+}
+
+
+نکته: اگر می‌خواهید از امنیت بیشتری استفاده کنید، refresh token را در HttpOnly Secure SameSite cookie ست کنید و فقط access_token را به کلاینت بدهید یا دسترسی را تنها با کوکی مدیریت کنید. ولی برای هماهنگی سریع با فرانت‌اند فعلی که از localStorage استفاده می‌کند، برگرداندن JSON کافی است (در نظر داشته باشید تولید نهایی امن‌تر باید از کوکی httpOnly استفاده کند).
+
+d) seed کردن کاربر دمو
+
+تضمین وجود حساب دمو مهمه. نمونه تابع Go که در startup اجرا می‌شود:
+
+func seedDemoUser(db *sql.DB) error {
+  email := "admin@example.com"
+  password := "Admin123!"
+  hashed, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+  _, err := db.Exec(`
+    INSERT INTO users (id, email, password_hash, first_name, last_name, status, created_at, updated_at)
+    SELECT gen_random_uuid(), $1, $2, 'Demo', 'Admin', 'active', now(), now()
+    WHERE NOT EXISTS (SELECT 1 FROM users WHERE lower(email) = lower($1));
+  `, email, string(hashed))
+  return err
+}
+
+
+در صورتی که از Postgres استفاده می‌کنید و gen_random_uuid() موجود نبود، از uuid_generate_v4() یا تولید UUID در کد استفاده کنید.
+
+e) نکات DB و منطق لاگین
+
+ایمیل‌ها را در DB به صورت lowercase ذخیره یا هنگام lookup از lower(email) = lower($1) استفاده کنید. این از خطاهای case-sensitive جلوگیری می‌کنه.
+
+همیشه از bcrypt یا argon2 برای هش کردن رمز استفاده کنید، نه مدل‌های ضعیف یا مقایسهٔ متن ساده.
+
+برای خطاهای نامعتبر 401 Unauthorized مناسب‌تر است اما در body JSON شبیه قالب بالا برگردانده شود.

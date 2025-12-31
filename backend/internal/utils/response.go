@@ -77,24 +77,3 @@ func InternalError(w http.ResponseWriter, message string) {
 func Conflict(w http.ResponseWriter, message string) {
         ErrorResponse(w, http.StatusConflict, "CONFLICT", message, nil)
 }
-
-func Error(w http.ResponseWriter, status int, message string, details interface{}) {
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(status)
-        
-        var detailsMap map[string]string
-        if details != nil {
-                if d, ok := details.(map[string]string); ok {
-                        detailsMap = d
-                }
-        }
-
-        json.NewEncoder(w).Encode(APIResponse{
-                Success: false,
-                Error: &APIError{
-                        Code:    http.StatusText(status),
-                        Message: message,
-                        Details: detailsMap,
-                },
-        })
-}
