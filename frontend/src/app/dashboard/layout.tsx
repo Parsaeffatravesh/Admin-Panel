@@ -38,7 +38,9 @@ export default function DashboardLayout({
       <Sidebar />
       <MobileHeader />
       <main className="flex-1 bg-background lg:ltr:ml-0 lg:rtl:mr-0 pt-14 lg:pt-0">
-        {children}
+        <div className="page-enter">
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -134,15 +134,15 @@
   }
 
   :root {
-    transition: background-color 0.3s ease-out, color 0.3s ease-out;
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
   }
 
   .theme-transition {
     transition:
-      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-      color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-      box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   body {
@@ -167,22 +167,38 @@
     to { opacity: 1; }
   }
 
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .animate-in {
-    animation: fade-in 0.2s ease-out;
+    animation: fade-in 0.15s ease-out;
   }
 
   .fade-in {
-    animation: fade-in 0.2s ease-out;
+    animation: fade-in 0.15s ease-out;
   }
 
   .slide-in-from-bottom-2 {
-    animation: slide-in-from-bottom-2 0.2s ease-out;
+    animation: slide-in-from-bottom-2 0.15s ease-out;
+  }
+
+  .page-enter {
+    animation: page-enter 0.12s ease-out;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .animate-in,
     .fade-in,
     .slide-in-from-bottom-2,
+    .page-enter,
     .theme-transition {
       animation: none;
       transition: none;
