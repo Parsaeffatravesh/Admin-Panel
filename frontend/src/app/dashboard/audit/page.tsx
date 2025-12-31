@@ -21,15 +21,12 @@ export default function AuditPage() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const token = localStorage.getItem('access_token');
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
       const searchParams = new URLSearchParams();
       if (search) searchParams.set('search', search);
       
       const response = await fetch(`${baseUrl}/api/v1/audit-logs/export?${searchParams}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        credentials: 'include',
       });
       
       if (response.ok) {
