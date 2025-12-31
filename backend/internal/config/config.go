@@ -53,7 +53,7 @@ func Load() *Config {
                         ReadTimeout:    getDurationEnv("SERVER_READ_TIMEOUT", 15*time.Second),
                         WriteTimeout:   getDurationEnv("SERVER_WRITE_TIMEOUT", 15*time.Second),
                         IdleTimeout:    getDurationEnv("SERVER_IDLE_TIMEOUT", 60*time.Second),
-                        AllowedOrigins: allowedOrigins,
+                        AllowedOrigins: []string{"*"},
                 },
                 Database: DatabaseConfig{
                         URL:             getEnv("DATABASE_URL", ""),
