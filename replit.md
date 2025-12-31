@@ -114,6 +114,12 @@ A production-grade Admin Panel platform with:
 - `APP_ENV` - Environment (development/production)
 
 ## Recent Changes
+- Dec 31, 2025: Added ETag support with conditional GET requests (If-None-Match) for API responses
+- Dec 31, 2025: Migrated from middleware.ts to proxy.ts for Next.js 16 compatibility
+- Dec 31, 2025: Added skeleton loading components for smoother UI during auth checks
+- Dec 31, 2025: Added composite database indexes for users, audit_logs, and roles tables
+- Dec 31, 2025: Added preconnect hints for external fonts to improve load times
+- Dec 31, 2025: Optimized CSS transitions from 300ms to 150ms with page-enter animation
 - Dec 31, 2025: Added responsive design with mobile sidebar and hamburger menu
 - Dec 31, 2025: Implemented bilingual support (English/Persian) with i18n system
 - Dec 31, 2025: Added RTL layout support for Persian with Vazirmatn font
