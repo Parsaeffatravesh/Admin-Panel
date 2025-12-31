@@ -27,51 +27,15 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private getAuthToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('access_token');
-    }
-    return null;
-  }
-
-  private getTokenExpiresAt(): number | null {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('token_expires_at');
-      return stored ? Number(stored) : null;
-    }
-    return null;
-  }
-
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {},
-    retryAttempt = false
+    options: RequestInit = {}
   ): Promise<T> {
     const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/refresh');
-
-    if (!isAuthEndpoint) {
-      const expiresAt = this.getTokenExpiresAt();
-      if (expiresAt) {
-        const bufferMs = 60_000;
-        if (expiresAt - Date.now() <= bufferMs) {
-          const refreshed = await refreshAccessTokenSingleFlight();
-          if (!refreshed) {
-            handleAuthFailure();
-            throw new Error('Session expired. Please sign in again.');
-          }
-        }
-      }
-    }
-
-    const token = this.getAuthToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
-
-    if (token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-    }
 
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
@@ -80,10 +44,6 @@ class ApiClient {
     });
 
     if (response.status === 401 && !isAuthEndpoint) {
-      const refreshed = await refreshAccessTokenSingleFlight();
-      if (refreshed && !retryAttempt) {
-        return this.request<T>(endpoint, options, true);
-      }
       handleAuthFailure();
       throw new Error('Unauthorized. Please sign in again.');
     }
@@ -134,58 +94,11 @@ class ApiClient {
 
 export const api = new ApiClient(API_URL);
 
-const setAuthCookies = (accessToken: string, expiresInSeconds?: number) => {
-  if (typeof document === 'undefined') return;
-  const accessMaxAge = expiresInSeconds ?? 900;
-  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `access_token=${encodeURIComponent(accessToken)}; Path=/; Max-Age=${accessMaxAge}; SameSite=Lax${secureFlag}`;
-};
-
-const clearAuthCookies = () => {
-  if (typeof document === 'undefined') return;
-  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `access_token=; Path=/; Max-Age=0; SameSite=Lax${secureFlag}`;
-};
-
 const handleAuthFailure = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('user');
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('token_expires_at');
-  clearAuthCookies();
   window.alert('نشست شما منقضی شده است. لطفاً دوباره وارد شوید.');
   window.location.href = '/login';
-};
-
-let refreshPromise: Promise<boolean> | null = null;
-
-const refreshAccessTokenSingleFlight = async (): Promise<boolean> => {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  if (refreshPromise) {
-    return refreshPromise;
-  }
-
-  refreshPromise = (async () => {
-    try {
-      const response = await authApi.refresh();
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem(
-        'token_expires_at',
-        String(Date.now() + (response.expires_in || 0) * 1000)
-      );
-      setAuthCookies(response.access_token, response.expires_in);
-      return true;
-    } catch {
-      return false;
-    } finally {
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
 };
 
 export interface User {
@@ -369,7 +282,6 @@ export const adminApi = {
 };
 
 export const getExportUrl = (endpoint: string) => {
-  const token = localStorage.getItem('access_token');
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-  return `${baseUrl}${endpoint}?token=${token}`;
+  return `${baseUrl}${endpoint}`;
 };
