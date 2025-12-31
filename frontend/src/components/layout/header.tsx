@@ -1,8 +1,8 @@
 'use client';
 
 import { useI18n } from '@/lib/i18n';
-import { ThemeToggle } from '../ThemeToggle';
-import { LanguageToggle } from '../LanguageToggle';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 interface HeaderProps {
   title: string;
