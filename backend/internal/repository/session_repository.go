@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"time"
 
 	"admin-panel/internal/models"
 
@@ -19,41 +21,55 @@ func NewSessionRepository(db *pgxpool.Pool) *SessionRepository {
 
 func (r *SessionRepository) Create(ctx context.Context, session *models.Session) error {
 	query := `
-		INSERT INTO sessions (id, user_id, refresh_token, ip_address, user_agent, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO sessions (id, user_id, refresh_token, ip_address, user_agent, expires_at, created_at, rotated_at, replaced_by_token, revoked_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 	_, err := r.db.Exec(ctx, query,
 		session.ID, session.UserID, session.RefreshToken,
 		session.IPAddress, session.UserAgent, session.ExpiresAt, session.CreatedAt,
+		session.RotatedAt, session.ReplacedByToken, session.RevokedAt,
 	)
 	return err
 }
 
 func (r *SessionRepository) GetByRefreshToken(ctx context.Context, token string) (*models.Session, error) {
 	query := `
-		SELECT id, user_id, refresh_token, ip_address, user_agent, expires_at, created_at
+		SELECT id, user_id, refresh_token, ip_address, user_agent, expires_at, created_at, rotated_at, replaced_by_token, revoked_at
 		FROM sessions WHERE refresh_token = $1
 	`
 	session := &models.Session{}
+	var rotatedAt sql.NullTime
+	var replacedByToken sql.NullString
+	var revokedAt sql.NullTime
 	err := r.db.QueryRow(ctx, query, token).Scan(
 		&session.ID, &session.UserID, &session.RefreshToken,
 		&session.IPAddress, &session.UserAgent, &session.ExpiresAt, &session.CreatedAt,
+		&rotatedAt, &replacedByToken, &revokedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+	if rotatedAt.Valid {
+		session.RotatedAt = &rotatedAt.Time
+	}
+	if replacedByToken.Valid {
+		session.ReplacedByToken = &replacedByToken.String
+	}
+	if revokedAt.Valid {
+		session.RevokedAt = &revokedAt.Time
+	}
 	return session, nil
 }
 
-func (r *SessionRepository) Update(ctx context.Context, session *models.Session) error {
-	query := `UPDATE sessions SET refresh_token = $2, expires_at = $3 WHERE id = $1`
-	_, err := r.db.Exec(ctx, query, session.ID, session.RefreshToken, session.ExpiresAt)
+func (r *SessionRepository) MarkRotated(ctx context.Context, sessionID uuid.UUID, rotatedAt time.Time, replacedByToken string) error {
+	query := `UPDATE sessions SET rotated_at = $2, replaced_by_token = $3 WHERE id = $1`
+	_, err := r.db.Exec(ctx, query, sessionID, rotatedAt, replacedByToken)
 	return err
 }
 
-func (r *SessionRepository) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
-	query := `DELETE FROM sessions WHERE user_id = $1`
-	_, err := r.db.Exec(ctx, query, userID)
+func (r *SessionRepository) RevokeByUserID(ctx context.Context, userID uuid.UUID, revokedAt time.Time) error {
+	query := `UPDATE sessions SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL`
+	_, err := r.db.Exec(ctx, query, userID, revokedAt)
 	return err
 }
 
