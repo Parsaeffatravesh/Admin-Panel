@@ -37,6 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedUser = localStorage.getItem('user');
       const storedAccessToken = localStorage.getItem('access_token');
       const storedExpiresAt = localStorage.getItem('token_expires_at');
+      if (localStorage.getItem('refresh_token')) {
+        localStorage.removeItem('refresh_token');
+      }
       
       if (storedUser) {
         try {
@@ -47,10 +50,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (storedAccessToken) {
-        const expiresInSeconds = storedExpiresAt
-          ? Math.max(0, Math.floor((Number(storedExpiresAt) - Date.now()) / 1000))
-          : undefined;
-        setAuthCookies(storedAccessToken, expiresInSeconds);
+        const bufferSeconds = 30;
+        if (!storedExpiresAt) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('token_expires_at');
+        } else {
+          const expiresInSeconds = Math.max(
+            0,
+            Math.floor((Number(storedExpiresAt) - Date.now()) / 1000)
+          );
+          if (expiresInSeconds <= bufferSeconds) {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('token_expires_at');
+          } else {
+            // Buffer avoids race conditions near expiry.
+            setAuthCookies(storedAccessToken, expiresInSeconds);
+          }
+        }
       }
       
       try {
