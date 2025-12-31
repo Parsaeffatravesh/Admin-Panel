@@ -26,10 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token && storedUser) {
       try {
         setUser(JSON.parse(storedUser));
+        document.cookie = `access_token=${token}; path=/; max-age=900; SameSite=Lax`;
       } catch {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
+        document.cookie = 'access_token=; path=/; max-age=0';
       }
     }
     setIsLoading(false);
@@ -40,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('access_token', response.tokens.access_token);
     localStorage.setItem('refresh_token', response.tokens.refresh_token);
     localStorage.setItem('user', JSON.stringify(response.user));
+    document.cookie = `access_token=${response.tokens.access_token}; path=/; max-age=900; SameSite=Lax`;
     setUser(response.user);
     router.push('/dashboard');
   };
@@ -52,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
+      document.cookie = 'access_token=; path=/; max-age=0';
       setUser(null);
       router.push('/login');
     }
