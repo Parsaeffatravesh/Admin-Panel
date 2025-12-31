@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { useI18n, Language } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Eye, EyeOff } from 'lucide-react';
 
 const languages: { code: Language; label: string; flag: string }[] = [
   { code: 'en', label: 'EN', flag: '🇺🇸' },
@@ -18,6 +18,7 @@ const languages: { code: Language; label: string; flag: string }[] = [
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -47,7 +48,8 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      // Trim inputs to avoid whitespace issues
+      await login(email.trim(), password.trim());
       toast.success(language === 'fa' ? 'ورود موفق' : 'Logged in successfully');
     } catch (err) {
       const message = err instanceof Error ? err.message : (language === 'fa' ? 'ورود ناموفق' : 'Login failed');
@@ -110,16 +112,31 @@ export default function LoginForm() {
               <label htmlFor="password" className="text-sm font-medium text-foreground">
                 {t('auth.password')}
               </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={language === 'fa' ? 'رمز عبور را وارد کنید' : 'Enter your password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="transition-colors duration-200"
-                dir="ltr"
-              />
+              <div className="relative group">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={language === 'fa' ? 'رمز عبور را وارد کنید' : 'Enter your password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="transition-colors duration-200 pr-10 rtl:pl-10 rtl:pr-3"
+                  dir="ltr"
+                />
+                {password.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 rtl:left-0 rtl:right-auto rtl:pl-3 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading 
