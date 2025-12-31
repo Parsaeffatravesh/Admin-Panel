@@ -100,6 +100,10 @@ const handleAuthFailure = () => {
   const currentPath = window.location.pathname;
   const publicPaths = ['/login', '/register', '/forgot-password'];
 
+  if (currentPath === '/login') {
+    return;
+  }
+
   if (!publicPaths.some(path => currentPath.startsWith(path))) {
     window.alert('نشست شما منقضی شده است. لطفاً دوباره وارد شوید.');
     window.location.href = '/login';
