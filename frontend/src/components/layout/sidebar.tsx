@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -16,10 +16,12 @@ import {
   Sparkles,
   Menu,
   X,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useTheme, Theme } from '../../hooks/useTheme';
 import { useI18n, Language } from '@/lib/i18n';
+import { useRouter } from 'next/navigation';
 
 const navigationKeys = [
   { key: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -42,9 +44,25 @@ const languages: { code: Language; label: string; flag: string }[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { logout, user } = useAuth();
   const { theme, setTheme, mounted: themeMounted } = useTheme();
   const { t, language, setLanguage, mounted: i18nMounted } = useI18n();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!isPending && pendingHref) {
+      setPendingHref(null);
+    }
+  }, [isPending, pendingHref]);
+
+  const handleNavigation = (href: string) => {
+    setPendingHref(href);
+    startTransition(() => {
+      router.push(href);
+    });
+  };
 
   const sidebarContent = (
     <>
@@ -54,25 +72,40 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {navigationKeys.map((item) => {
-          const isActive = pathname === item.href || 
+          const isCurrentPath = pathname === item.href || 
             (item.href !== '/dashboard' && pathname.startsWith(item.href));
+          const isOptimisticActive = pendingHref === item.href;
+          const isActive = isOptimisticActive || (isCurrentPath && !pendingHref);
+          const isLoading = isOptimisticActive && isPending;
+          
           return (
             <Link
               key={item.key}
               href={item.href}
+              onClick={(e) => {
+                if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+                e.preventDefault();
+                handleNavigation(item.href);
+              }}
+              aria-current={isCurrentPath ? 'page' : undefined}
               className={cn(
                 'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
+                'transition-all duration-150',
                 isActive
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
               )}
             >
-              <item.icon
-                className={cn(
-                  'h-5 w-5 flex-shrink-0',
-                  isActive ? 'stroke-[2.5px]' : 'stroke-[1.5px] group-hover:stroke-[2px]'
-                )}
-              />
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin" />
+              ) : (
+                <item.icon
+                  className={cn(
+                    'h-5 w-5 flex-shrink-0',
+                    isActive ? 'stroke-[2.5px]' : 'stroke-[1.5px] group-hover:stroke-[2px]'
+                  )}
+                />
+              )}
               <span>{t(item.key)}</span>
             </Link>
           );
@@ -183,9 +216,26 @@ export function MobileHeader() {
 
 function MobileSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { logout, user } = useAuth();
   const { theme, setTheme, mounted: themeMounted } = useTheme();
   const { t, language, setLanguage, isRTL, mounted: i18nMounted } = useI18n();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!isPending && pendingHref) {
+      setPendingHref(null);
+    }
+  }, [isPending, pendingHref]);
+
+  const handleNavigation = (href: string) => {
+    setPendingHref(href);
+    onClose();
+    startTransition(() => {
+      router.push(href);
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -211,26 +261,40 @@ function MobileSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
           {navigationKeys.map((item) => {
-            const isActive = pathname === item.href || 
+            const isCurrentPath = pathname === item.href || 
               (item.href !== '/dashboard' && pathname.startsWith(item.href));
+            const isOptimisticActive = pendingHref === item.href;
+            const isActive = isOptimisticActive || (isCurrentPath && !pendingHref);
+            const isLoading = isOptimisticActive && isPending;
+            
             return (
               <Link
                 key={item.key}
                 href={item.href}
-                onClick={onClose}
+                onClick={(e) => {
+                  if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+                  e.preventDefault();
+                  handleNavigation(item.href);
+                }}
+                aria-current={isCurrentPath ? 'page' : undefined}
                 className={cn(
                   'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
+                  'transition-all duration-150',
                   isActive
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
                     : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
                 )}
               >
-                <item.icon
-                  className={cn(
-                    'h-5 w-5 flex-shrink-0',
-                    isActive ? 'stroke-[2.5px]' : 'stroke-[1.5px] group-hover:stroke-[2px]'
-                  )}
-                />
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin" />
+                ) : (
+                  <item.icon
+                    className={cn(
+                      'h-5 w-5 flex-shrink-0',
+                      isActive ? 'stroke-[2.5px]' : 'stroke-[1.5px] group-hover:stroke-[2px]'
+                    )}
+                  />
+                )}
                 <span>{t(item.key)}</span>
               </Link>
             );

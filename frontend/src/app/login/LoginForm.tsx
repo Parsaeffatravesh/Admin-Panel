@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { useI18n, Language } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { Copy, Check } from 'lucide-react';
 
 const languages: { code: Language; label: string; flag: string }[] = [
   { code: 'en', label: 'EN', flag: '🇺🇸' },
@@ -19,8 +20,26 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
   const { login } = useAuth();
   const { t, language, setLanguage, mounted } = useI18n();
+
+  const copyToClipboard = async (text: string, type: 'email' | 'password') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (type === 'email') {
+        setCopiedEmail(true);
+        setTimeout(() => setCopiedEmail(false), 2000);
+      } else {
+        setCopiedPassword(true);
+        setTimeout(() => setCopiedPassword(false), 2000);
+      }
+      toast.success(language === 'fa' ? 'کپی شد' : 'Copied');
+    } catch {
+      toast.error(language === 'fa' ? 'خطا در کپی' : 'Failed to copy');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,9 +127,44 @@ export default function LoginForm() {
                 : t('auth.signIn')
               }
             </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              {t('auth.demo')} admin@example.com / Admin123!
-            </p>
+            <div className="text-center text-sm text-muted-foreground space-y-2">
+              <p className="font-medium">{t('auth.demo')}</p>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard('admin@example.com', 'email')}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono',
+                    'bg-muted hover:bg-muted/80 transition-colors duration-150',
+                    'border border-border'
+                  )}
+                >
+                  admin@example.com
+                  {copiedEmail ? (
+                    <Check className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <Copy className="h-3 w-3 opacity-50" />
+                  )}
+                </button>
+                <span>/</span>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard('Admin123!', 'password')}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono',
+                    'bg-muted hover:bg-muted/80 transition-colors duration-150',
+                    'border border-border'
+                  )}
+                >
+                  Admin123!
+                  {copiedPassword ? (
+                    <Check className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <Copy className="h-3 w-3 opacity-50" />
+                  )}
+                </button>
+              </div>
+            </div>
           </form>
         </CardContent>
       </Card>
