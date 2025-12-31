@@ -17,7 +17,13 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    status: 'active' | 'inactive' | 'suspended';
+  }>({
     email: '',
     password: '',
     first_name: '',
@@ -203,7 +209,7 @@ export default function UsersPage() {
                     <label className="text-sm font-medium">Status</label>
                     <select
                       value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' | 'suspended' })}
                       className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                     >
                       <option value="active">Active</option>

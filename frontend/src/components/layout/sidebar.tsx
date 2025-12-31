@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useCallback } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -22,6 +22,8 @@ import { useAuth } from '@/lib/auth';
 import { useTheme, Theme } from '../../hooks/useTheme';
 import { useI18n, Language } from '@/lib/i18n';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { usersApi, rolesApi, auditApi, dashboardApi } from '@/lib/api';
 
 const navigationKeys = [
   { key: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -45,6 +47,7 @@ const languages: { code: Language; label: string; flag: string }[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { logout, user } = useAuth();
   const { theme, setTheme, mounted: themeMounted } = useTheme();
   const { t, language, setLanguage, mounted: i18nMounted } = useI18n();
@@ -63,6 +66,39 @@ export function Sidebar() {
       router.push(href);
     });
   };
+
+  const prefetchData = useCallback((href: string) => {
+    switch (href) {
+      case '/dashboard':
+        queryClient.prefetchQuery({
+          queryKey: ['dashboard-stats'],
+          queryFn: () => dashboardApi.getStats(),
+          staleTime: 30 * 1000,
+        });
+        break;
+      case '/dashboard/users':
+        queryClient.prefetchQuery({
+          queryKey: ['users', 1, ''],
+          queryFn: () => usersApi.list({ page: 1, per_page: 10 }),
+          staleTime: 30 * 1000,
+        });
+        break;
+      case '/dashboard/roles':
+        queryClient.prefetchQuery({
+          queryKey: ['roles', 1, ''],
+          queryFn: () => rolesApi.list({ page: 1, per_page: 10 }),
+          staleTime: 60 * 1000,
+        });
+        break;
+      case '/dashboard/audit':
+        queryClient.prefetchQuery({
+          queryKey: ['audit-logs', 1, ''],
+          queryFn: () => auditApi.list({ page: 1, per_page: 10 }),
+          staleTime: 30 * 1000,
+        });
+        break;
+    }
+  }, [queryClient]);
 
   const sidebarContent = (
     <>
@@ -87,6 +123,7 @@ export function Sidebar() {
                 e.preventDefault();
                 handleNavigation(item.href);
               }}
+              onMouseEnter={() => prefetchData(item.href)}
               aria-current={isCurrentPath ? 'page' : undefined}
               className={cn(
                 'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
