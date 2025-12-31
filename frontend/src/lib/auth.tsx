@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { authApi, User, LoginResponse } from './api';
+import { ApiError, authApi, User, LoginResponse } from './api';
 
 type RefreshTokenStrategy = 'cookie' | 'storage';
 
@@ -101,6 +101,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      const hasSession = () => {
+        const cookieString = typeof document !== 'undefined' ? document.cookie : '';
+        const hasAccessCookie = cookieString.split(';').some(cookie => cookie.trim().startsWith('access_token='));
+        const hasRefreshCookie = cookieString.split(';').some(cookie => cookie.trim().startsWith('refresh_token='));
+        const hasStoredRefresh =
+          REFRESH_TOKEN_STRATEGY === 'storage' && !!localStorage.getItem(REFRESH_TOKEN_KEY);
+
+        return hasAccessCookie || hasRefreshCookie || hasStoredRefresh;
+      };
+
+      if (!hasSession()) {
+        localStorage.removeItem('user');
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const meData = await authApi.me();
         if (meData) {
@@ -117,12 +134,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
         }
-      } catch {
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          clearTokenMetadata();
+        }
         localStorage.removeItem('user');
         setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     initAuth();

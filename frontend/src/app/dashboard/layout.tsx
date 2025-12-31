@@ -8,10 +8,12 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const accessToken = cookieStore.get('access_token')?.value;
 
   if (!accessToken) {
+    cookieStore.delete('access_token');
+    cookieStore.delete('refresh_token');
     redirect('/login');
   }
 
@@ -24,22 +26,18 @@ export default async function DashboardLayout({
       cache: 'no-store',
       credentials: 'include',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
     });
 
     if (!response.ok) {
-      cookieStore.set('access_token', '', {
-        expires: new Date(0),
-        path: '/',
-      });
+      cookieStore.delete('access_token');
+      cookieStore.delete('refresh_token');
       redirect('/login');
     }
   } catch {
-    cookieStore.set('access_token', '', {
-      expires: new Date(0),
-      path: '/',
-    });
+    cookieStore.delete('access_token');
+    cookieStore.delete('refresh_token');
     redirect('/login');
   }
 
