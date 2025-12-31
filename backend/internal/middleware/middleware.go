@@ -3,6 +3,8 @@ package middleware
 import (
         "bytes"
         "context"
+        "crypto/md5"
+        "encoding/hex"
         "fmt"
         "net/http"
         "strings"
@@ -236,14 +238,62 @@ func SecurityHeaders(next http.Handler) http.Handler {
         })
 }
 
+type etagWriter struct {
+        http.ResponseWriter
+        buf        *bytes.Buffer
+        statusCode int
+        request    *http.Request
+        maxAge     int
+}
+
+func (w *etagWriter) Write(b []byte) (int, error) {
+        return w.buf.Write(b)
+}
+
+func (w *etagWriter) WriteHeader(code int) {
+        w.statusCode = code
+}
+
+func (w *etagWriter) finish() {
+        data := w.buf.Bytes()
+        
+        if w.statusCode >= 200 && w.statusCode < 300 && len(data) > 0 {
+                hash := md5.Sum(data)
+                etag := `"` + hex.EncodeToString(hash[:]) + `"`
+                w.ResponseWriter.Header().Set("ETag", etag)
+                w.ResponseWriter.Header().Set("Cache-Control", fmt.Sprintf("private, max-age=%d, stale-while-revalidate=60", w.maxAge))
+                w.ResponseWriter.Header().Set("Vary", "Authorization, Accept-Encoding")
+                
+                if match := w.request.Header.Get("If-None-Match"); match == etag {
+                        w.ResponseWriter.WriteHeader(http.StatusNotModified)
+                        return
+                }
+        }
+        
+        if w.statusCode != 0 {
+                w.ResponseWriter.WriteHeader(w.statusCode)
+        }
+        w.ResponseWriter.Write(data)
+}
+
 func CacheableResponse(maxAge int) func(http.Handler) http.Handler {
         return func(next http.Handler) http.Handler {
                 return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                        if r.Method == http.MethodGet {
-                                w.Header().Set("Cache-Control", fmt.Sprintf("private, max-age=%d, stale-while-revalidate=60", maxAge))
-                                w.Header().Set("Vary", "Authorization, Accept-Encoding")
+                        if r.Method != http.MethodGet {
+                                next.ServeHTTP(w, r)
+                                return
                         }
-                        next.ServeHTTP(w, r)
+                        
+                        ew := &etagWriter{
+                                ResponseWriter: w,
+                                buf:            &bytes.Buffer{},
+                                statusCode:     http.StatusOK,
+                                request:        r,
+                                maxAge:         maxAge,
+                        }
+                        
+                        next.ServeHTTP(ew, r)
+                        ew.finish()
                 })
         }
 }

@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 const publicPaths = ['/login', '/register', '/forgot-password']
 
-export function middleware(request: NextRequest) {
+function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   
   if (publicPaths.some(path => pathname.startsWith(path))) {
@@ -22,6 +22,8 @@ export function middleware(request: NextRequest) {
   
   return NextResponse.next()
 }
+
+export default proxy
 
 export const config = {
   matcher: [
