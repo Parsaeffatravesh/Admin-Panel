@@ -68,7 +68,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       }
-      
+
+      const activeAccessToken = localStorage.getItem('access_token');
+      const activeExpiresAt = localStorage.getItem('token_expires_at');
+      const hasCookieAccessToken =
+        typeof document !== 'undefined' &&
+        document.cookie.split('; ').some((cookie) => cookie.startsWith('access_token='));
+      const hasSessionEvidence =
+        (activeAccessToken && activeExpiresAt) ||
+        (activeExpiresAt && hasCookieAccessToken) ||
+        hasCookieAccessToken;
+      if (!hasSessionEvidence) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const meData = await authApi.me();
         if (meData) {
