@@ -44,15 +44,7 @@ type AppConfig struct {
 func Load() *Config {
         allowedOrigins := getStringSliceEnv("ALLOWED_ORIGINS", nil)
         if len(allowedOrigins) == 0 {
-                if replitDomain := os.Getenv("REPLIT_DEV_DOMAIN"); replitDomain != "" {
-                        allowedOrigins = []string{
-                                "https://" + replitDomain,
-                                "http://localhost:5000",
-                                "http://127.0.0.1:5000",
-                        }
-                } else {
-                        allowedOrigins = []string{"http://localhost:5000", "http://127.0.0.1:5000"}
-                }
+                allowedOrigins = []string{"*"}
         }
         
         return &Config{

@@ -48,10 +48,12 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      // Trim inputs to avoid whitespace issues
+      // Log the attempt to help debugging
+      console.log('Attempting login for:', email.trim());
       await login(email.trim(), password.trim());
       toast.success(language === 'fa' ? 'ورود موفق' : 'Logged in successfully');
     } catch (err) {
+      console.error('Login error details:', err);
       const message = err instanceof Error ? err.message : (language === 'fa' ? 'ورود ناموفق' : 'Login failed');
       setError(message);
       toast.error(message);

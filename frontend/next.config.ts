@@ -2,10 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: [
-    "*.janeway.replit.dev",
+    "*.replit.app",
     "*.replit.dev",
-    "127.0.0.1",
-    "localhost",
+    "*.janeway.replit.dev",
+    "localhost:5000",
+    "127.0.0.1:5000",
   ],
   compress: true,
   poweredByHeader: false,
