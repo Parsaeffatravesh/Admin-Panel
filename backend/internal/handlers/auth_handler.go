@@ -2,6 +2,7 @@ package handlers
 
 import (
         "encoding/json"
+        "io"
         "net/http"
         "os"
 
@@ -138,9 +139,15 @@ type RefreshRequest struct {
 
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
         var req RefreshRequest
-        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
                 utils.BadRequest(w, "Invalid request body", nil)
                 return
+        }
+
+        if req.RefreshToken == "" {
+                if cookie, err := r.Cookie("refresh_token"); err == nil && cookie.Value != "" {
+                        req.RefreshToken = cookie.Value
+                }
         }
 
         if err := h.validate.Struct(&req); err != nil {
