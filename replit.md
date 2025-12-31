@@ -114,6 +114,7 @@ A production-grade Admin Panel platform with:
 - `APP_ENV` - Environment (development/production)
 
 ## Recent Changes
+- Dec 31, 2025: Added smooth page transitions using View Transitions API with TransitionLink component
 - Dec 31, 2025: Converted RootLayout to Server Component with ThemeI18nProviders wrapper
 - Dec 31, 2025: Moved ClientProviders (QueryClient, AuthProvider) to dashboard layout only
 - Dec 31, 2025: Backend now sets HttpOnly cookies for access_token and refresh_token
