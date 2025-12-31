@@ -10,6 +10,16 @@ interface ApiResponse<T> {
   };
 }
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -84,20 +94,19 @@ class ApiClient {
       try {
         const data: ApiResponse<T> = await response.json();
         if (!response.ok || !data.success) {
-          throw new Error(data.error?.message || `Server returned ${response.status}`);
+          throw new ApiError(response.status, data.error?.message || `Server returned ${response.status}`);
         }
         return data.data as T;
       } catch (err) {
-        throw new Error(
-          err instanceof Error
-            ? `Failed to parse JSON response: ${err.message}`
-            : 'Failed to parse JSON response'
-        );
+        if (err instanceof ApiError) {
+          throw err;
+        }
+        throw new ApiError(response.status, 'Failed to parse server response');
       }
-    } else {
-      const text = await response.text();
-      throw new Error(`Server returned ${response.status}: ${text}`);
     }
+
+    await response.text();
+    throw new ApiError(response.status, `Server returned ${response.status}`);
   }
 
   async get<T>(endpoint: string): Promise<T> {
