@@ -97,8 +97,13 @@ export const api = new ApiClient(API_URL);
 const handleAuthFailure = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('user');
-  window.alert('نشست شما منقضی شده است. لطفاً دوباره وارد شوید.');
-  window.location.href = '/login';
+  const currentPath = window.location.pathname;
+  const publicPaths = ['/login', '/register', '/forgot-password'];
+
+  if (!publicPaths.some(path => currentPath.startsWith(path))) {
+    window.alert('نشست شما منقضی شده است. لطفاً دوباره وارد شوید.');
+    window.location.href = '/login';
+  }
 };
 
 export interface User {
