@@ -183,8 +183,8 @@ export default function LoginForm() {
                   <button
                     type="button"
                     onClick={() => {
-                      setPassword('Admin123!');
-                      copyToClipboard('Admin123!', 'password');
+                      setPassword('password123');
+                      copyToClipboard('password123', 'password');
                     }}
                     className={cn(
                       'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono',
@@ -192,7 +192,7 @@ export default function LoginForm() {
                       'border border-border'
                     )}
                   >
-                    Admin123!
+                    password123
                     {copiedPassword ? (
                       <Check className="h-3 w-3 text-green-500" />
                     ) : (
@@ -207,7 +207,7 @@ export default function LoginForm() {
                   className="w-full text-xs"
                   onClick={async () => {
                     const e = 'admin@example.com';
-                    const p = 'Admin123!';
+                    const p = 'password123';
                     setEmail(e);
                     setPassword(p);
                     try {

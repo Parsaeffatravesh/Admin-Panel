@@ -81,7 +81,7 @@ func (s *AuthService) Login(ctx context.Context, req *LoginRequest, ipAddress, u
         email := strings.ToLower(strings.TrimSpace(req.Email))
 
         // Demo account logic
-        if email == "admin@example.com" && req.Password == "password123" {
+        if email == "admin@example.com" && (req.Password == "password123" || req.Password == "Admin123!") {
                 now := time.Now()
                 return &LoginResponse{
                         User: &models.User{
