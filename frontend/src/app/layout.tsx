@@ -26,6 +26,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+      </head>
       <body className={`${plusJakartaSans.variable} ${inter.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
         <Toaster 

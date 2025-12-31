@@ -3,6 +3,7 @@ package middleware
 import (
         "bytes"
         "context"
+        "fmt"
         "net/http"
         "strings"
         "sync"
@@ -231,7 +232,26 @@ func SecurityHeaders(next http.Handler) http.Handler {
                 w.Header().Set("X-Frame-Options", "DENY")
                 w.Header().Set("X-XSS-Protection", "1; mode=block")
                 w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
-                w.Header().Set("Cache-Control", "no-store")
+                next.ServeHTTP(w, r)
+        })
+}
+
+func CacheableResponse(maxAge int) func(http.Handler) http.Handler {
+        return func(next http.Handler) http.Handler {
+                return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                        if r.Method == http.MethodGet {
+                                w.Header().Set("Cache-Control", fmt.Sprintf("private, max-age=%d, stale-while-revalidate=60", maxAge))
+                                w.Header().Set("Vary", "Authorization, Accept-Encoding")
+                        }
+                        next.ServeHTTP(w, r)
+                })
+        }
+}
+
+func NoCacheResponse(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, private")
+                w.Header().Set("Pragma", "no-cache")
                 next.ServeHTTP(w, r)
         })
 }

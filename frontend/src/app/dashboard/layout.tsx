@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Sidebar, MobileHeader } from '@/components/layout/sidebar';
 import { useI18n } from '@/lib/i18n';
+import { DashboardSkeleton } from '@/components/ui/skeleton';
 
 export default function DashboardLayout({
   children,
@@ -23,8 +24,12 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-lg">{t('common.loading')}</div>
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <MobileHeader />
+        <main className="flex-1 bg-background lg:ltr:ml-0 lg:rtl:mr-0 pt-14 lg:pt-0">
+          <DashboardSkeleton />
+        </main>
       </div>
     );
   }
