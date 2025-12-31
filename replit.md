@@ -114,6 +114,10 @@ A production-grade Admin Panel platform with:
 - `APP_ENV` - Environment (development/production)
 
 ## Recent Changes
+- Dec 31, 2025: Converted RootLayout to Server Component with ThemeI18nProviders wrapper
+- Dec 31, 2025: Moved ClientProviders (QueryClient, AuthProvider) to dashboard layout only
+- Dec 31, 2025: Backend now sets HttpOnly cookies for access_token and refresh_token
+- Dec 31, 2025: Updated auth to sync state via /auth/me endpoint with cookie-based auth
 - Dec 31, 2025: Added ETag support with conditional GET requests (If-None-Match) for API responses
 - Dec 31, 2025: Migrated from middleware.ts to proxy.ts for Next.js 16 compatibility
 - Dec 31, 2025: Added skeleton loading components for smoother UI during auth checks

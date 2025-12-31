@@ -20,29 +20,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-        document.cookie = `access_token=${token}; path=/; max-age=900; SameSite=Lax`;
-      } catch {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        document.cookie = 'access_token=; path=/; max-age=0';
+    const initAuth = async () => {
+      const storedUser = localStorage.getItem('user');
+      
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch {
+          localStorage.removeItem('user');
+        }
       }
-    }
-    setIsLoading(false);
+      
+      try {
+        const meData = await authApi.me();
+        if (meData) {
+          const userData: User = {
+            id: meData.user_id,
+            tenant_id: meData.tenant_id,
+            email: meData.email,
+            first_name: '',
+            last_name: '',
+            status: 'active',
+            created_at: '',
+            updated_at: '',
+          };
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+      } catch {
+        localStorage.removeItem('user');
+        setUser(null);
+      }
+      
+      setIsLoading(false);
+    };
+    
+    initAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
     const response: LoginResponse = await authApi.login(email, password);
-    localStorage.setItem('access_token', response.tokens.access_token);
-    localStorage.setItem('refresh_token', response.tokens.refresh_token);
     localStorage.setItem('user', JSON.stringify(response.user));
-    document.cookie = `access_token=${response.tokens.access_token}; path=/; max-age=900; SameSite=Lax`;
     setUser(response.user);
     router.push('/dashboard');
   };
@@ -52,10 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authApi.logout();
     } catch {
     } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      document.cookie = 'access_token=; path=/; max-age=0';
       setUser(null);
       router.push('/login');
     }

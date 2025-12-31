@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./providers";
+import { ThemeI18nProviders } from "@/components/ThemeI18nProviders";
 import { Toaster } from "sonner";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -31,7 +31,9 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
       </head>
       <body className={`${plusJakartaSans.variable} ${inter.variable} font-sans antialiased`}>
-        <Providers>{children}</Providers>
+        <ThemeI18nProviders>
+          {children}
+        </ThemeI18nProviders>
         <Toaster 
           position="top-right"
           toastOptions={{
