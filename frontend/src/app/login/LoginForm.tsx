@@ -48,9 +48,8 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      // Log the attempt to help debugging
-      console.log('Attempting login for:', email.trim());
-      await login(email.trim(), password.trim());
+      // Lowercase email and trim both
+      await login(email.trim().toLowerCase(), password.trim());
       toast.success(language === 'fa' ? 'ورود موفق' : 'Logged in successfully');
     } catch (err) {
       console.error('Login error details:', err);
@@ -148,40 +147,71 @@ export default function LoginForm() {
             </Button>
             <div className="text-center text-sm text-muted-foreground space-y-2">
               <p className="font-medium">{t('auth.demo')}</p>
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                <button
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('admin@example.com');
+                      copyToClipboard('admin@example.com', 'email');
+                    }}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono',
+                      'bg-muted hover:bg-muted/80 transition-colors duration-150',
+                      'border border-border'
+                    )}
+                  >
+                    admin@example.com
+                    {copiedEmail ? (
+                      <Check className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <Copy className="h-3 w-3 opacity-50" />
+                    )}
+                  </button>
+                  <span>/</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPassword('Admin123!');
+                      copyToClipboard('Admin123!', 'password');
+                    }}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono',
+                      'bg-muted hover:bg-muted/80 transition-colors duration-150',
+                      'border border-border'
+                    )}
+                  >
+                    Admin123!
+                    {copiedPassword ? (
+                      <Check className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <Copy className="h-3 w-3 opacity-50" />
+                    )}
+                  </button>
+                </div>
+                <Button
                   type="button"
-                  onClick={() => copyToClipboard('admin@example.com', 'email')}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono',
-                    'bg-muted hover:bg-muted/80 transition-colors duration-150',
-                    'border border-border'
-                  )}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={async () => {
+                    const e = 'admin@example.com';
+                    const p = 'Admin123!';
+                    setEmail(e);
+                    setPassword(p);
+                    try {
+                      setIsLoading(true);
+                      await login(e, p);
+                    } catch (err) {
+                      const message = err instanceof Error ? err.message : (language === 'fa' ? 'ورود ناموفق' : 'Login failed');
+                      setError(message);
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
                 >
-                  admin@example.com
-                  {copiedEmail ? (
-                    <Check className="h-3 w-3 text-green-500" />
-                  ) : (
-                    <Copy className="h-3 w-3 opacity-50" />
-                  )}
-                </button>
-                <span>/</span>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard('Admin123!', 'password')}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono',
-                    'bg-muted hover:bg-muted/80 transition-colors duration-150',
-                    'border border-border'
-                  )}
-                >
-                  Admin123!
-                  {copiedPassword ? (
-                    <Check className="h-3 w-3 text-green-500" />
-                  ) : (
-                    <Copy className="h-3 w-3 opacity-50" />
-                  )}
-                </button>
+                  {language === 'fa' ? 'ورود سریع با حساب دمو' : 'Quick Sign in with Demo'}
+                </Button>
               </div>
             </div>
           </form>

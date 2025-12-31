@@ -60,6 +60,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const response: LoginResponse = await authApi.login(email, password);
+    
+    // Store tokens for subsequent requests
+    if (response.tokens) {
+      localStorage.setItem('access_token', response.tokens.access_token);
+      localStorage.setItem('refresh_token', response.tokens.refresh_token);
+      localStorage.setItem(
+        'token_expires_at',
+        String(Date.now() + (response.tokens.expires_in || 0) * 1000)
+      );
+    }
+
     localStorage.setItem('user', JSON.stringify(response.user));
     setUser(response.user);
     window.location.href = '/dashboard';

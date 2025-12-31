@@ -1,0 +1,102 @@
+1) ذخیره‌ی توکن‌ها بعد از لاگین
+
+فایل: frontend/src/lib/auth.tsx — تابع login
+
+جایگزین کنید تابع login فعلی (خطایی که فقط user ذخیره می‌کند) را با نسخه‌ی زیر:
+
+// frontend/src/lib/auth.tsx  (داخل AuthProvider)
+const login = async (email: string, password: string) => {
+  const response: LoginResponse = await authApi.login(email, password);
+
+  // ذخیره‌ی توکن‌ها برای استفاده در درخواست‌های بعدی
+  if (response.tokens) {
+    localStorage.setItem('access_token', response.tokens.access_token);
+    localStorage.setItem('refresh_token', response.tokens.refresh_token);
+    // می‌تونیم زمان انقضا هم ذخیره کنیم
+    localStorage.setItem(
+      'token_expires_at',
+      String(Date.now() + (response.tokens.expires_in || 0) * 1000)
+    );
+  }
+
+  // ذخیره کاربر و ست کردن آن در context
+  localStorage.setItem('user', JSON.stringify(response.user));
+  setUser(response.user);
+
+  // ریدایرکت به داشبورد
+  window.location.href = '/dashboard';
+};
+
+
+دلیل/اثر: حالا ApiClient.getAuthToken() (که از localStorage می‌خواند) مقدار access_token را پیدا خواهد کرد و هدر Authorization را می‌فرستد؛ بنابراین درخواست‌های بعدی با توکن همراه خواهند بود. (در ApiClient همین‌طور credentials: 'include' تنظیم شده است تا در صورت استفاده از کوکی هم مشکلی نباشد). 
+
+api
+
+2) پر کردن خودکار فیلدها برای دکمه‌ی دمو
+
+فایل: frontend/src/app/login/LoginForm.tsx — در بخش دکمه‌های دمو (کپی).
+به‌جای فقط کپی کردن، بهتر است دکمه‌ای اضافه کنید که مستقیم فیلدها را پر کند و حتی فوراً لاگین کند (اختیاری).
+
+تعدیل دکمه‌ها (نمونه):
+
+// در LoginForm.tsx، به جای onClick فقط copyToClipboard:
+<button
+  type="button"
+  onClick={() => {
+    setEmail('admin@example.com'); // <-- خودکار پر می‌کند
+    copyToClipboard('admin@example.com', 'email');
+  }}
+  ...
+>
+  admin@example.com
+</button>
+
+<button
+  type="button"
+  onClick={() => {
+    setPassword('Admin123!'); // <-- خودکار پر می‌کند
+    copyToClipboard('Admin123!', 'password');
+  }}
+  ...
+>
+  Admin123!
+</button>
+
+{/* یا یک دکمه "Use demo and sign in" */}
+<button
+  type="button"
+  onClick={async () => {
+    const e = 'admin@example.com';
+    const p = 'Admin123!';
+    setEmail(e);
+    setPassword(p);
+    try {
+      setIsLoading(true);
+      await login(e, p); // این login تابع از useAuth است
+    } finally {
+      setIsLoading(false);
+    }
+  }}
+>
+  {language === 'fa' ? 'ورود با دمو' : 'Sign in with demo'}
+</button>
+
+
+دلیل/اثر: کاربر می‌تواند با یک کلیک لاگین کند — حذف منبع خطا (کپی/پیست اشتباه).
+
+(در کد موجود دکمه‌‌ها فقط مقدار را کپی می‌کنند؛ این موضوع باعث گیج شدن کاربر می‌شود.) 
+
+LoginForm
+
+3) بهبود trim / lowercase کردن ایمیل پیش از ارسال
+
+در handleSubmit یا پیش از login(...) بهتر است ایمیل را به toLowerCase() تبدیل کنید تا اختلاف حروف بزرگ/کوچک باعث نشود کاربر لاگین نشود:
+
+await login(email.trim().toLowerCase(), password.trim());
+
+
+دلیل: اغلب ایمیل‌ها در DB به شکل lowercase ذخیره می‌شوند؛ تضمین یکنواختی کمک می‌کند خطا نداشته باشیم.
+
+4) پیام خطای واضح‌تر
+
+در LoginForm هنگام خطا، در catch بهتر است اگر سرور پیام خطا ارسال کرده آنرا نمایش دهید (هم‌اکنون پیام err.message نمایش داده می‌شود؛ اما اگر data.error.details وجود داشته باشد استفاده شود). همچنین لاگ سرور (console.error) را نگه دارید تا توسعه‌دهنده بهتر بررسی کند. (شما حالا لاگ attempt و error را دارید — خوب است)
