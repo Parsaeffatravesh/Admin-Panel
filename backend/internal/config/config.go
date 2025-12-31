@@ -1,6 +1,7 @@
 package config
 
 import (
+        "log"
         "os"
         "strconv"
         "strings"
@@ -44,7 +45,8 @@ type AppConfig struct {
 func Load() *Config {
         allowedOrigins := getStringSliceEnv("ALLOWED_ORIGINS", nil)
         if len(allowedOrigins) == 0 {
-                allowedOrigins = []string{"*"}
+                log.Printf("ALLOWED_ORIGINS is empty; defaulting to http://localhost:3000")
+                allowedOrigins = []string{"http://localhost:3000"}
         }
         
         return &Config{
@@ -53,7 +55,7 @@ func Load() *Config {
                         ReadTimeout:    getDurationEnv("SERVER_READ_TIMEOUT", 15*time.Second),
                         WriteTimeout:   getDurationEnv("SERVER_WRITE_TIMEOUT", 15*time.Second),
                         IdleTimeout:    getDurationEnv("SERVER_IDLE_TIMEOUT", 60*time.Second),
-                        AllowedOrigins: []string{"*"},
+                        AllowedOrigins: allowedOrigins,
                 },
                 Database: DatabaseConfig{
                         URL:             getEnv("DATABASE_URL", ""),
