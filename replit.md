@@ -58,7 +58,9 @@ A production-grade Admin Panel platform with:
 - **Security**: CSRF/XSS protection, secure cookies, rate limiting
 - **Multi-tenant ready**: tenant_id on all tables
 - **Design System**: Multi-theme (Light/Dark/Legendary) with smooth transitions
-- **Typography**: Plus Jakarta Sans font family
+- **Typography**: Plus Jakarta Sans font (LTR), Vazirmatn font (RTL/Persian)
+- **Internationalization**: Bilingual (English/Persian) with full RTL support
+- **Responsive**: Mobile-first design with hamburger menu and collapsible sidebar
 - **Accessibility**: WCAG AA compliant, reduced-motion support, focus states
 
 ## Default Credentials
@@ -112,6 +114,10 @@ A production-grade Admin Panel platform with:
 - `APP_ENV` - Environment (development/production)
 
 ## Recent Changes
+- Dec 31, 2025: Added responsive design with mobile sidebar and hamburger menu
+- Dec 31, 2025: Implemented bilingual support (English/Persian) with i18n system
+- Dec 31, 2025: Added RTL layout support for Persian with Vazirmatn font
+- Dec 31, 2025: Added loading/selected state animations for navigation items
 - Dec 31, 2025: Added multi-theme support (Light/Dark/Legendary) with smooth CSS transitions
 - Dec 31, 2025: Integrated Plus Jakarta Sans font and improved typography system
 - Dec 31, 2025: Added ThemeProvider for global theme state management

@@ -187,4 +187,26 @@
       transition: none;
     }
   }
+
+  .ltr {
+    direction: ltr;
+  }
+
+  .rtl {
+    direction: rtl;
+  }
+}
+
+[dir="rtl"] {
+  font-family: "Vazirmatn", "Plus Jakarta Sans", "Inter", sans-serif;
+}
+
+[dir="rtl"] .ltr\:ml-auto {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+[dir="rtl"] .ltr\:mr-auto {
+  margin-right: 0;
+  margin-left: auto;
 }

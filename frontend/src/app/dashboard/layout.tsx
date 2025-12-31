@@ -3,7 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Sidebar } from '@/components/layout/sidebar';
+import { Sidebar, MobileHeader } from '@/components/layout/sidebar';
+import { useI18n } from '@/lib/i18n';
 
 export default function DashboardLayout({
   children,
@@ -12,6 +13,7 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -22,7 +24,7 @@ export default function DashboardLayout({
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">{t('common.loading')}</div>
       </div>
     );
   }
@@ -34,7 +36,8 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className="flex-1 bg-gray-50">
+      <MobileHeader />
+      <main className="flex-1 bg-background lg:ltr:ml-0 lg:rtl:mr-0 pt-14 lg:pt-0">
         {children}
       </main>
     </div>

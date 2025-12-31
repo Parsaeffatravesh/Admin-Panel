@@ -5,6 +5,7 @@ import { dashboardApi } from '@/lib/api';
 import { Header } from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Shield, Activity, LogIn, TrendingUp } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 export default function DashboardPage() {
   const { data: stats, isLoading } = useQuery({
@@ -12,43 +13,51 @@ export default function DashboardPage() {
     queryFn: dashboardApi.getStats,
   });
 
+  const { t, language } = useI18n();
+
   const statCards = [
     {
-      title: 'Total Users',
+      titleKey: 'dashboard.totalUsers',
       value: stats?.total_users ?? 0,
       icon: Users,
       iconBg: 'bg-primary/10 text-primary',
     },
     {
-      title: 'Active Users',
+      titleKey: 'dashboard.activeUsers',
       value: stats?.active_users ?? 0,
       icon: Activity,
       iconBg: 'bg-green-500/10 text-green-600 dark:text-green-400',
     },
     {
-      title: 'Total Roles',
+      titleKey: 'dashboard.totalRoles',
       value: stats?.total_roles ?? 0,
       icon: Shield,
       iconBg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
     },
     {
-      title: 'Recent Logins (24h)',
+      titleKey: 'dashboard.auditLogs',
       value: stats?.recent_logins ?? 0,
       icon: LogIn,
       iconBg: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
     },
   ];
 
+  const statusLabels: Record<string, { en: string; fa: string }> = {
+    active: { en: 'Active', fa: 'فعال' },
+    inactive: { en: 'Inactive', fa: 'غیرفعال' },
+    suspended: { en: 'Suspended', fa: 'معلق' },
+  };
+
   return (
     <div className="animate-in fade-in">
-      <Header title="Dashboard" />
-      <div className="p-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <Header title={t('dashboard.title')} />
+      <div className="p-4 sm:p-6">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => (
-            <Card key={stat.title} className="hover:shadow-md transition-shadow duration-200">
+            <Card key={stat.titleKey} className="hover:shadow-md transition-shadow duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
+                  {t(stat.titleKey)}
                 </CardTitle>
                 <div className={`rounded-lg p-2 ${stat.iconBg}`}>
                   <stat.icon className="h-4 w-4" />
@@ -67,10 +76,12 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="mt-6 sm:mt-8 grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Users by Status</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                {language === 'fa' ? 'کاربران بر اساس وضعیت' : 'Users by Status'}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -89,13 +100,17 @@ export default function DashboardPage() {
                           status === 'inactive' ? 'bg-muted-foreground' :
                           'bg-destructive'
                         }`} />
-                        <span className="capitalize text-foreground">{status}</span>
+                        <span className="text-foreground">
+                          {statusLabels[status]?.[language] || status}
+                        </span>
                       </div>
                       <span className="font-semibold text-foreground">{count as number}</span>
                     </div>
                   ))}
                   {Object.keys(stats?.users_by_status ?? {}).length === 0 && (
-                    <p className="text-muted-foreground">No data available</p>
+                    <p className="text-muted-foreground">
+                      {language === 'fa' ? 'داده‌ای موجود نیست' : 'No data available'}
+                    </p>
                   )}
                 </div>
               )}
@@ -104,7 +119,9 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                {language === 'fa' ? 'فعالیت‌های اخیر' : 'Recent Activity'}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -121,17 +138,21 @@ export default function DashboardPage() {
                         <TrendingUp className="h-3 w-3 text-muted-foreground" />
                         <span className="text-foreground">
                           <span className="font-medium">{activity.action}</span>
-                          <span className="text-muted-foreground"> on </span>
+                          <span className="text-muted-foreground">
+                            {language === 'fa' ? ' در ' : ' on '}
+                          </span>
                           <span className="text-muted-foreground">{activity.resource}</span>
                         </span>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(activity.created_at).toLocaleTimeString()}
+                        {new Date(activity.created_at).toLocaleTimeString(language === 'fa' ? 'fa-IR' : 'en-US')}
                       </span>
                     </div>
                   ))}
                   {(stats?.recent_activity?.length ?? 0) === 0 && (
-                    <p className="text-muted-foreground text-center py-4">No recent activity</p>
+                    <p className="text-muted-foreground text-center py-4">
+                      {language === 'fa' ? 'فعالیت اخیری وجود ندارد' : 'No recent activity'}
+                    </p>
                   )}
                 </div>
               )}
