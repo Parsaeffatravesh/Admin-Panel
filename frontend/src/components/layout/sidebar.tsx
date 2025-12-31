@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -19,7 +20,6 @@ import {
 import { useAuth } from '@/lib/auth';
 import { useTheme, Theme } from '../../hooks/useTheme';
 import { useI18n, Language } from '@/lib/i18n';
-import { TransitionLink } from '@/components/ui/transition-link';
 
 const navigationKeys = [
   { key: 'nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -57,7 +57,7 @@ export function Sidebar() {
           const isActive = pathname === item.href || 
             (item.href !== '/dashboard' && pathname.startsWith(item.href));
           return (
-            <TransitionLink
+            <Link
               key={item.key}
               href={item.href}
               className={cn(
@@ -74,7 +74,7 @@ export function Sidebar() {
                 )}
               />
               <span>{t(item.key)}</span>
-            </TransitionLink>
+            </Link>
           );
         })}
       </nav>
@@ -214,7 +214,7 @@ function MobileSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
             const isActive = pathname === item.href || 
               (item.href !== '/dashboard' && pathname.startsWith(item.href));
             return (
-              <TransitionLink
+              <Link
                 key={item.key}
                 href={item.href}
                 onClick={onClose}
@@ -232,7 +232,7 @@ function MobileSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                   )}
                 />
                 <span>{t(item.key)}</span>
-              </TransitionLink>
+              </Link>
             );
           })}
         </nav>
