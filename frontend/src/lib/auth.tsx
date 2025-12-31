@@ -19,9 +19,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  const setAuthCookies = (accessToken: string, refreshToken?: string, expiresInSeconds?: number) => {
+    if (typeof document === 'undefined') return;
+    const accessMaxAge = expiresInSeconds ?? 900;
+    document.cookie = `access_token=${accessToken}; Path=/; Max-Age=${accessMaxAge}; SameSite=Lax`;
+    if (refreshToken) {
+      document.cookie = `refresh_token=${refreshToken}; Path=/; Max-Age=604800; SameSite=Lax`;
+    }
+  };
+
+  const clearAuthCookies = () => {
+    if (typeof document === 'undefined') return;
+    document.cookie = 'access_token=; Path=/; Max-Age=0; SameSite=Lax';
+    document.cookie = 'refresh_token=; Path=/; Max-Age=0; SameSite=Lax';
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       const storedUser = localStorage.getItem('user');
+      const storedAccessToken = localStorage.getItem('access_token');
+      const storedRefreshToken = localStorage.getItem('refresh_token');
+      const storedExpiresAt = localStorage.getItem('token_expires_at');
       
       if (storedUser) {
         try {
@@ -29,6 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {
           localStorage.removeItem('user');
         }
+      }
+
+      if (storedAccessToken) {
+        const expiresInSeconds = storedExpiresAt
+          ? Math.max(0, Math.floor((Number(storedExpiresAt) - Date.now()) / 1000))
+          : undefined;
+        setAuthCookies(storedAccessToken, storedRefreshToken ?? undefined, expiresInSeconds);
       }
       
       try {
@@ -69,6 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         'token_expires_at',
         String(Date.now() + (response.tokens.expires_in || 0) * 1000)
       );
+      setAuthCookies(
+        response.tokens.access_token,
+        response.tokens.refresh_token,
+        response.tokens.expires_in
+      );
     }
 
     localStorage.setItem('user', JSON.stringify(response.user));
@@ -82,6 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
     } finally {
       localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('token_expires_at');
+      clearAuthCookies();
       setUser(null);
       router.push('/login');
     }
