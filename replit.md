@@ -114,6 +114,7 @@ A production-grade Admin Panel platform with:
 - `APP_ENV` - Environment (development/production)
 
 ## Recent Changes
+- Dec 31, 2025: Added prefetchQuery on hover for navigation links (dashboard, users, roles, audit)
 - Dec 31, 2025: Added copyable demo credentials on login page with copy icons and toast notifications
 - Dec 31, 2025: Implemented optimistic sidebar navigation with instant selection state and loading spinner
 - Dec 31, 2025: Converted RootLayout to Server Component with ThemeI18nProviders wrapper
