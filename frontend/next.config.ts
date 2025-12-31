@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     "*.replit.app",
     "*.replit.dev",
     "*.janeway.replit.dev",
+    "ff9f88a6-a464-47f3-8adf-2265615ae524-00-1mbe8sgsut9v9.sisko.replit.dev",
     "localhost:5000",
     "127.0.0.1:5000",
   ],

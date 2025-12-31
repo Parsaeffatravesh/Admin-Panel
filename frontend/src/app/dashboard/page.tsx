@@ -8,10 +8,15 @@ import { Users, Shield, Activity, LogIn, TrendingUp, ArrowUpRight } from 'lucide
 import { useI18n } from '@/lib/i18n';
 
 export default function DashboardPage() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, error } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: dashboardApi.getStats,
+    retry: false,
   });
+
+  if (error) {
+    console.error('Dashboard stats fetch error:', error);
+  }
 
   const { t, language } = useI18n();
 

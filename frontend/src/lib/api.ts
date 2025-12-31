@@ -253,7 +253,21 @@ export const auditApi = {
 };
 
 export const dashboardApi = {
-  getStats: () => api.get<DashboardStats>('/api/v1/dashboard/stats'),
+  getStats: async () => {
+    try {
+      return await api.get<DashboardStats>('/api/v1/dashboard/stats');
+    } catch (error) {
+      console.error('Dashboard stats fetch error:', error);
+      return {
+        total_users: 0,
+        active_users: 0,
+        total_roles: 0,
+        recent_logins: 0,
+        users_by_status: {},
+        recent_activity: [],
+      };
+    }
+  },
 };
 
 export interface FeatureFlag {

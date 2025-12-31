@@ -86,6 +86,7 @@ func (s *AuthService) Login(ctx context.Context, req *LoginRequest, ipAddress, u
                 return &LoginResponse{
                         User: &models.User{
                                 ID:        uuid.MustParse("00000000-0000-0000-0000-000000000000"),
+                                TenantID:  uuid.MustParse("00000000-0000-0000-0000-000000000001"),
                                 Email:     "admin@example.com",
                                 FirstName: "Demo",
                                 LastName:  "Admin",
