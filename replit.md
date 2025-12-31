@@ -57,6 +57,9 @@ A production-grade Admin Panel platform with:
 - **Frontend**: React Server Components, TanStack Query, debounced search
 - **Security**: CSRF/XSS protection, secure cookies, rate limiting
 - **Multi-tenant ready**: tenant_id on all tables
+- **Design System**: Multi-theme (Light/Dark/Legendary) with smooth transitions
+- **Typography**: Plus Jakarta Sans font family
+- **Accessibility**: WCAG AA compliant, reduced-motion support, focus states
 
 ## Default Credentials
 - **Email**: admin@example.com
@@ -109,6 +112,13 @@ A production-grade Admin Panel platform with:
 - `APP_ENV` - Environment (development/production)
 
 ## Recent Changes
+- Dec 31, 2025: Added multi-theme support (Light/Dark/Legendary) with smooth CSS transitions
+- Dec 31, 2025: Integrated Plus Jakarta Sans font and improved typography system
+- Dec 31, 2025: Added ThemeProvider for global theme state management
+- Dec 31, 2025: Added Sonner toast notifications
+- Dec 31, 2025: Improved sidebar with animated active states and theme switcher
+- Dec 31, 2025: Enhanced button/card components with transitions and focus states
+- Dec 31, 2025: Added accessibility improvements (reduced-motion, focus rings)
 - Dec 30, 2025: Added CSV export endpoint for audit logs
 - Dec 30, 2025: Implemented feature flags API and frontend management UI
 - Dec 30, 2025: Added admin authentication table with Argon2id password hashing
