@@ -26,13 +26,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
-      <head>
-        <link 
-          href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" 
-          rel="stylesheet" 
-          type="text/css" 
-        />
-      </head>
       <body className={`${plusJakartaSans.variable} ${inter.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
         <Toaster 

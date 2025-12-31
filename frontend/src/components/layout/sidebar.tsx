@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useTransition } from 'react';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -16,7 +16,6 @@ import {
   Sparkles,
   Menu,
   X,
-  Languages,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useTheme, Theme } from '../../hooks/useTheme';
@@ -43,26 +42,9 @@ const languages: { code: Language; label: string; flag: string }[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { logout, user } = useAuth();
   const { theme, setTheme, mounted: themeMounted } = useTheme();
-  const { t, language, setLanguage, isRTL, mounted: i18nMounted } = useI18n();
-  const [isPending, startTransition] = useTransition();
-  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isPending && navigatingTo) {
-      setNavigatingTo(null);
-    }
-  }, [isPending, navigatingTo]);
-
-  const handleNavigation = (href: string) => {
-    if (pathname === href) return;
-    setNavigatingTo(href);
-    startTransition(() => {
-      router.push(href);
-    });
-  };
+  const { t, language, setLanguage, mounted: i18nMounted } = useI18n();
 
   const sidebarContent = (
     <>
@@ -74,41 +56,25 @@ export function Sidebar() {
         {navigationKeys.map((item) => {
           const isActive = pathname === item.href || 
             (item.href !== '/dashboard' && pathname.startsWith(item.href));
-          const isNavigating = navigatingTo === item.href;
           return (
-            <button
+            <Link
               key={item.key}
-              onClick={() => handleNavigation(item.href)}
-              disabled={isNavigating}
+              href={item.href}
               className={cn(
                 'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
-                'transition-all duration-200',
-                isNavigating
-                  ? 'bg-sidebar-accent/30 text-sidebar-foreground/50 cursor-wait'
-                  : isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                isActive
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
               )}
             >
               <item.icon
                 className={cn(
-                  'h-5 w-5 flex-shrink-0 transition-all duration-200',
-                  isNavigating
-                    ? 'animate-pulse'
-                    : isActive 
-                      ? 'stroke-[2.5px]' 
-                      : 'stroke-[1.5px] group-hover:stroke-[2px]'
+                  'h-5 w-5 flex-shrink-0',
+                  isActive ? 'stroke-[2.5px]' : 'stroke-[1.5px] group-hover:stroke-[2px]'
                 )}
               />
-              <span className={cn(isNavigating && 'animate-pulse')}>
-                {t(item.key)}
-              </span>
-              {isNavigating && (
-                <span className="ltr:ml-auto rtl:mr-auto">
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                </span>
-              )}
-            </button>
+              <span>{t(item.key)}</span>
+            </Link>
           );
         })}
       </nav>
@@ -217,27 +183,9 @@ export function MobileHeader() {
 
 function MobileSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { logout, user } = useAuth();
   const { theme, setTheme, mounted: themeMounted } = useTheme();
   const { t, language, setLanguage, isRTL, mounted: i18nMounted } = useI18n();
-  const [isPending, startTransition] = useTransition();
-  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isPending && navigatingTo) {
-      setNavigatingTo(null);
-    }
-  }, [isPending, navigatingTo]);
-
-  const handleNavigation = (href: string) => {
-    if (pathname === href) return;
-    setNavigatingTo(href);
-    startTransition(() => {
-      router.push(href);
-    });
-    onClose();
-  };
 
   if (!isOpen) return null;
 
@@ -249,7 +197,6 @@ function MobileSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
       />
       <div className={cn(
         "fixed inset-y-0 z-50 w-72 bg-sidebar flex flex-col lg:hidden",
-        "transition-transform duration-300 ease-out",
         isRTL ? "right-0" : "left-0"
       )}>
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
@@ -266,41 +213,26 @@ function MobileSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
           {navigationKeys.map((item) => {
             const isActive = pathname === item.href || 
               (item.href !== '/dashboard' && pathname.startsWith(item.href));
-            const isNavigating = navigatingTo === item.href;
             return (
-              <button
+              <Link
                 key={item.key}
-                onClick={() => handleNavigation(item.href)}
-                disabled={isNavigating}
+                href={item.href}
+                onClick={onClose}
                 className={cn(
                   'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
-                  'transition-all duration-200',
-                  isNavigating
-                    ? 'bg-sidebar-accent/30 text-sidebar-foreground/50 cursor-wait'
-                    : isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                  isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
                 )}
               >
                 <item.icon
                   className={cn(
-                    'h-5 w-5 flex-shrink-0 transition-all duration-200',
-                    isNavigating
-                      ? 'animate-pulse'
-                      : isActive 
-                        ? 'stroke-[2.5px]' 
-                        : 'stroke-[1.5px] group-hover:stroke-[2px]'
+                    'h-5 w-5 flex-shrink-0',
+                    isActive ? 'stroke-[2.5px]' : 'stroke-[1.5px] group-hover:stroke-[2px]'
                   )}
                 />
-                <span className={cn(isNavigating && 'animate-pulse')}>
-                  {t(item.key)}
-                </span>
-                {isNavigating && (
-                  <span className="ltr:ml-auto rtl:mr-auto">
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  </span>
-                )}
-              </button>
+                <span>{t(item.key)}</span>
+              </Link>
             );
           })}
         </nav>
