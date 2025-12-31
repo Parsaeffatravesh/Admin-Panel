@@ -45,13 +45,26 @@ class ApiClient {
       credentials: 'include',
     });
 
-    const data: ApiResponse<T> = await response.json();
+    const contentType = response.headers.get('content-type') || '';
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.error?.message || 'An error occurred');
+    if (contentType.includes('application/json')) {
+      try {
+        const data: ApiResponse<T> = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error?.message || `Server returned ${response.status}`);
+        }
+        return data.data as T;
+      } catch (err) {
+        throw new Error(
+          err instanceof Error
+            ? `Failed to parse JSON response: ${err.message}`
+            : 'Failed to parse JSON response'
+        );
+      }
+    } else {
+      const text = await response.text();
+      throw new Error(`Server returned ${response.status}: ${text}`);
     }
-
-    return data.data as T;
   }
 
   async get<T>(endpoint: string): Promise<T> {

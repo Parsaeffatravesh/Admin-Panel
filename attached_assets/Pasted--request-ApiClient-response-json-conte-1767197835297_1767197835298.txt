@@ -1,0 +1,121 @@
+بهترین و ساده‌ترین اقدام فوری: تابع request در ApiClient باید قبل از response.json() چک کند که content-type حاوی application/json هست یا نه و از حالت fallback (خواندن متن و خطای واضح) استفاده کند. در کد فعلی شما مستقیماً await response.json() انجام می‌شود که روی Internal Server Error متن‌دار خطا می‌دهد (همان‌جا در frontend/src/lib/api.ts). 
+
+api
+
+پیشنهاد پیاده‌سازی (جایگزین بدنه‌ی request):
+
+private async request<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = this.getAuthToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  if (token) (headers as Record<string,string>)['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${this.baseUrl}${endpoint}`, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+
+  // اگر JSON هست سعی کنیم پارس کنیم، وگرنه متن خام را برگردانیم/اخطار دهیم
+  if (contentType.includes('application/json')) {
+    try {
+      const data: ApiResponse<T> = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error?.message || `Server returned ${response.status}`);
+      }
+      return data.data as T;
+    } catch (err) {
+      // اگر parse JSON شکست خورد، پیغام واضح‌تری تولید می‌کنیم
+      throw new Error(
+        err instanceof Error
+          ? `Failed to parse JSON response: ${err.message}`
+          : 'Failed to parse JSON response'
+      );
+    }
+  } else {
+    // متن/HTML یا چیز دیگری برگشته — متن را بخوانیم و به کاربر/لاگ برگردانیم
+    const text = await response.text();
+    throw new Error(`Server returned ${response.status}: ${text}`);
+  }
+}
+
+
+تأثیر فوری: دیگر با هر پاسخ غیر JSON، پیام خطای مفید می‌بینید (Server returned 500: Internal Server Error) به‌جای خطای ناواضح پارس JSON. همچنین در UI شما پیام واضح‌تری نمایش داده خواهد شد (چون LoginForm از err.message استفاده می‌کند). 
+
+LoginForm
+
+نکات دیباگ (گام به گام)
+
+در DevTools → Network هنگام زدن دکمه‌ی «Quick Sign in with Demo» ببینید پاسخِ POST /api/v1/auth/login چی برمی‌گرداند: status code، response headers (content-type) و body.
+
+اگر body متن Internal Server Error یا HTML باشه واضحه که بک‌اند panic کرده یا خطا داده.
+
+با curl مستقیم تست کنید تا ببینید سرور چه برمی‌گردونه:
+
+curl -i -X POST "http://<API_URL>/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Admin123!"}'
+
+
+اگر curl هم متن Internal Server Error یا HTML داد، باید سرور رو بررسی کنید (لاگ‌ها و stack trace).
+
+اگر curl JSON درست برمی‌گرداند اما فرانت‌اند نه، بررسی کنید NEXT_PUBLIC_API_URL صحیح است و درخواست واقعاً به همان آدرس می‌رود (Network tab).
+
+احتمال‌های معمول در بک‌اند و رفع آن‌ها
+
+پانیک/خطای داخلی در handler لاگین (مثلاً مشکل دیتابیس، ناکافی بودن migrations یا خطا در تبدیل مقدار). بررسی لاگ سرور معمولاً stack trace را نشان می‌دهد.
+
+هندلینگ خطا به‌صورت متن/HTML به‌جای JSON — باید در سرور تضمین شود که همه‌ی پاسخ‌های خطا برچسب Content-Type: application/json دارند و قالب ApiResponse شما (یا مشابه) را برمی‌گردانند. مثال middleware برای Go:
+
+func recoverMiddleware(next http.Handler) http.Handler {
+  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    defer func() {
+      if rec := recover(); rec != nil {
+        log.Printf("panic: %v\n%s", rec, debug.Stack())
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]interface{}{
+          "success": false,
+          "error": map[string]string{"message":"internal server error"},
+        })
+      }
+    }()
+    next.ServeHTTP(w, r)
+  })
+}
+
+
+عدم وجود حساب دمو یا خطای seed — مطمئن شوید دیتابیس کاربر دمو را داشته باشد (همچنین ایمیل را به صورت lowercase ذخیره یا lookup با lower(email) انجام دهید).
+
+پیشنهاد برای بک‌اند (پاسخ خطا به صورت JSON)
+
+در handler لاگین اگر خطا رخ دهد، همیشه JSON بفرستید:
+
+{
+  "success": false,
+  "error": {
+    "code": "invalid_credentials",
+    "message": "Invalid email or password"
+  }
+}
+
+
+و در موفقیت:
+
+{
+  "success": true,
+  "data": {
+    "user": { ... },
+    "tokens": { "access_token": "...", "refresh_token": "...", "expires_in": 3600 }
+  }
+}
+
+
+(این قالب با ApiResponse<T>ی که در فرانت‌اند شما استفاده شده سازگار است.)

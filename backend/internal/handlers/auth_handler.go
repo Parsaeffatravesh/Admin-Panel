@@ -52,11 +52,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
         if err != nil {
                 switch err {
                 case services.ErrInvalidCredentials:
-                        utils.Unauthorized(w, "Invalid email or password")
+                        utils.Error(w, http.StatusUnauthorized, "Invalid email or password", nil)
                 case services.ErrUserInactive:
-                        utils.Forbidden(w, "Account is inactive")
+                        utils.Error(w, http.StatusForbidden, "Account is inactive", nil)
                 default:
-                        utils.InternalError(w, "Login failed")
+                        utils.Error(w, http.StatusInternalServerError, "Login failed", nil)
                 }
                 return
         }
@@ -100,7 +100,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
         userAgent := r.UserAgent()
 
         if err := h.authService.Logout(r.Context(), claims.UserID, ipAddress, userAgent); err != nil {
-                utils.InternalError(w, "Logout failed")
+                utils.Error(w, http.StatusInternalServerError, "Logout failed", nil)
                 return
         }
 
@@ -148,18 +148,18 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
                 return
         }
 
-        tokens, err := h.authService.RefreshTokens(r.Context(), req.RefreshToken)
-        if err != nil {
-                switch err {
-                case services.ErrTokenExpired:
-                        utils.Unauthorized(w, "Refresh token has expired")
-                case services.ErrInvalidToken:
-                        utils.Unauthorized(w, "Invalid refresh token")
-                default:
-                        utils.InternalError(w, "Token refresh failed")
+                tokens, err := h.authService.RefreshTokens(r.Context(), req.RefreshToken)
+                if err != nil {
+                        switch err {
+                        case services.ErrTokenExpired:
+                                utils.Error(w, http.StatusUnauthorized, "Refresh token has expired", nil)
+                        case services.ErrInvalidToken:
+                                utils.Error(w, http.StatusUnauthorized, "Invalid refresh token", nil)
+                        default:
+                                utils.Error(w, http.StatusInternalServerError, "Token refresh failed", nil)
+                        }
+                        return
                 }
-                return
-        }
 
         secure := isProduction()
         
