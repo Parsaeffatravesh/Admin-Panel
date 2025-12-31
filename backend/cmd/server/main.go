@@ -69,7 +69,6 @@ func main() {
 
         r.Use(chimiddleware.RequestID)
         r.Use(chimiddleware.RealIP)
-        r.Use(chimiddleware.Compress(5))
         r.Use(middleware.RequestLogger(logger))
         r.Use(chimiddleware.Recoverer)
         r.Use(middleware.SecurityHeaders)
@@ -77,8 +76,8 @@ func main() {
                 AllowedOrigins:   cfg.Server.AllowedOrigins,
                 AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
                 AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"},
-                ExposedHeaders:   []string{"X-Request-ID"},
-                AllowCredentials: len(cfg.Server.AllowedOrigins) > 0 && cfg.Server.AllowedOrigins[0] != "*",
+                ExposedHeaders:   []string{"X-Request-ID", "Set-Cookie"},
+                AllowCredentials: true,
                 MaxAge:           300,
         }))
 

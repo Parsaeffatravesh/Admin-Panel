@@ -63,7 +63,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
         secure := isProduction()
         
-        http.SetCookie(w, &http.Cookie{
+        accessCookie := &http.Cookie{
                 Name:     "access_token",
                 Value:    resp.Tokens.AccessToken,
                 Path:     "/",
@@ -71,9 +71,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
                 HttpOnly: true,
                 Secure:   secure,
                 SameSite: http.SameSiteLaxMode,
-        })
-
-        http.SetCookie(w, &http.Cookie{
+        }
+        
+        refreshCookie := &http.Cookie{
                 Name:     "refresh_token",
                 Value:    resp.Tokens.RefreshToken,
                 Path:     "/",
@@ -81,7 +81,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
                 HttpOnly: true,
                 Secure:   secure,
                 SameSite: http.SameSiteLaxMode,
-        })
+        }
+        
+        w.Header().Add("Set-Cookie", accessCookie.String())
+        w.Header().Add("Set-Cookie", refreshCookie.String())
 
         utils.JSON(w, http.StatusOK, resp)
 }
@@ -101,21 +104,30 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
                 return
         }
 
-        http.SetCookie(w, &http.Cookie{
+        secure := isProduction()
+        
+        accessCookie := &http.Cookie{
                 Name:     "access_token",
                 Value:    "",
                 Path:     "/",
                 MaxAge:   -1,
                 HttpOnly: true,
-        })
-
-        http.SetCookie(w, &http.Cookie{
+                Secure:   secure,
+                SameSite: http.SameSiteLaxMode,
+        }
+        
+        refreshCookie := &http.Cookie{
                 Name:     "refresh_token",
                 Value:    "",
                 Path:     "/",
                 MaxAge:   -1,
                 HttpOnly: true,
-        })
+                Secure:   secure,
+                SameSite: http.SameSiteLaxMode,
+        }
+        
+        w.Header().Add("Set-Cookie", accessCookie.String())
+        w.Header().Add("Set-Cookie", refreshCookie.String())
 
         utils.JSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
@@ -148,6 +160,31 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
                 }
                 return
         }
+
+        secure := isProduction()
+        
+        accessCookie := &http.Cookie{
+                Name:     "access_token",
+                Value:    tokens.AccessToken,
+                Path:     "/",
+                MaxAge:   900,
+                HttpOnly: true,
+                Secure:   secure,
+                SameSite: http.SameSiteLaxMode,
+        }
+        
+        refreshCookie := &http.Cookie{
+                Name:     "refresh_token",
+                Value:    tokens.RefreshToken,
+                Path:     "/",
+                MaxAge:   604800,
+                HttpOnly: true,
+                Secure:   secure,
+                SameSite: http.SameSiteLaxMode,
+        }
+        
+        w.Header().Add("Set-Cookie", accessCookie.String())
+        w.Header().Add("Set-Cookie", refreshCookie.String())
 
         utils.JSON(w, http.StatusOK, tokens)
 }

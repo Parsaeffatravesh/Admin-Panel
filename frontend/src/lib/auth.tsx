@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response: LoginResponse = await authApi.login(email, password);
     localStorage.setItem('user', JSON.stringify(response.user));
     setUser(response.user);
-    router.push('/dashboard');
+    window.location.href = '/dashboard';
   };
 
   const logout = async () => {

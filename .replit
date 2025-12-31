@@ -25,13 +25,13 @@ args = "Frontend"
 name = "Backend API"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd backend && ./bin/server"
-waitForPort = 8080
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && go build -o bin/server ./cmd/server && ./bin/server"
+waitForPort = 8080
 
 [[workflows.workflow]]
 name = "Frontend"
@@ -52,3 +52,7 @@ externalPort = 80
 [[ports]]
 localPort = 8080
 externalPort = 8080
+
+[userenv]
+
+[userenv.shared]

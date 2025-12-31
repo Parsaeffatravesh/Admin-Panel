@@ -41,19 +41,28 @@ func NewAuthMiddleware(authService *services.AuthService, logger zerolog.Logger)
 
 func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                var token string
+                
                 authHeader := r.Header.Get("Authorization")
-                if authHeader == "" {
+                if authHeader != "" {
+                        parts := strings.Split(authHeader, " ")
+                        if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+                                token = parts[1]
+                        }
+                }
+                
+                if token == "" {
+                        if cookie, err := r.Cookie("access_token"); err == nil && cookie.Value != "" {
+                                token = cookie.Value
+                        }
+                }
+                
+                if token == "" {
                         utils.Unauthorized(w, "Missing authorization header")
                         return
                 }
 
-                parts := strings.Split(authHeader, " ")
-                if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-                        utils.Unauthorized(w, "Invalid authorization header format")
-                        return
-                }
-
-                claims, err := m.authService.ValidateAccessToken(parts[1])
+                claims, err := m.authService.ValidateAccessToken(token)
                 if err != nil {
                         utils.Unauthorized(w, "Invalid or expired token")
                         return

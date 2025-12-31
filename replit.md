@@ -114,6 +114,10 @@ A production-grade Admin Panel platform with:
 - `APP_ENV` - Environment (development/production)
 
 ## Recent Changes
+- Dec 31, 2025: Updated auth middleware to support both Authorization header and cookie-based auth
+- Dec 31, 2025: Fixed HttpOnly cookie delivery by using direct Header.Add instead of http.SetCookie
+- Dec 31, 2025: Updated CORS config to auto-detect Replit domain and enable credentials
+- Dec 31, 2025: Updated backend workflow to rebuild Go binary before running
 - Dec 31, 2025: Added prefetchQuery on hover for navigation links (dashboard, users, roles, audit)
 - Dec 31, 2025: Added copyable demo credentials on login page with copy icons and toast notifications
 - Dec 31, 2025: Implemented optimistic sidebar navigation with instant selection state and loading spinner

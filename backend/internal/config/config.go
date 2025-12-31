@@ -42,13 +42,26 @@ type AppConfig struct {
 }
 
 func Load() *Config {
+        allowedOrigins := getStringSliceEnv("ALLOWED_ORIGINS", nil)
+        if len(allowedOrigins) == 0 {
+                if replitDomain := os.Getenv("REPLIT_DEV_DOMAIN"); replitDomain != "" {
+                        allowedOrigins = []string{
+                                "https://" + replitDomain,
+                                "http://localhost:5000",
+                                "http://127.0.0.1:5000",
+                        }
+                } else {
+                        allowedOrigins = []string{"http://localhost:5000", "http://127.0.0.1:5000"}
+                }
+        }
+        
         return &Config{
                 Server: ServerConfig{
                         Port:           getEnv("PORT", "8080"),
                         ReadTimeout:    getDurationEnv("SERVER_READ_TIMEOUT", 15*time.Second),
                         WriteTimeout:   getDurationEnv("SERVER_WRITE_TIMEOUT", 15*time.Second),
                         IdleTimeout:    getDurationEnv("SERVER_IDLE_TIMEOUT", 60*time.Second),
-                        AllowedOrigins: getStringSliceEnv("ALLOWED_ORIGINS", []string{"*"}),
+                        AllowedOrigins: allowedOrigins,
                 },
                 Database: DatabaseConfig{
                         URL:             getEnv("DATABASE_URL", ""),
