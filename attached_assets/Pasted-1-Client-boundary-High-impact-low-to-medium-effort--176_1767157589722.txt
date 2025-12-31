@@ -1,0 +1,136 @@
+1) کوچک کردن Client-boundary — مهم‌ترین تغییر (High impact, low to medium effort)
+
+مسئله: در حال حاضر Providers یک کامپوننت client است که تمام درخت اپ زیرش را client می‌کند. این باعث می‌شود همهٔ صفحات نیاز به JS داشته باشند. (مراجعه: frontend/src/app/layout.tsx و frontend/src/app/providers.tsx) 
+
+layout +1
+
+چکار کنیم: فقط بخش‌هایی که واقعاً نیاز به React client دارند را به client محدود کنید.
+
+نگه دارید RootLayout به‌صورت server component.
+
+Providers را به دو یا چند بخش تقسیم کنید و تنها در زیر-لی‌آوت‌هایی که به react-query یا context نیاز دارند، آن را قرار دهید. مثال: قرار دادن ClientProviders فقط در frontend/src/app/dashboard/layout.tsx یا حتی فقط در page.tsx، نه در RootLayout. به این ترتیب بقیه صفحات از Server Components بهره‌مند می‌شوند و JS کمتری دانلود می‌شود.
+
+نمونهٔ ساختار پیشنهادی:
+
+frontend/src/app/layout.tsx        // server component (همان فعلی، ولی بدون Providers)
+frontend/src/app/dashboard/layout.tsx   // server component که زیرش ClientProviders را dynamic بارگذاری می‌کند
+frontend/src/components/ClientProviders.tsx  // 'use client' فقط برای providerها
+
+2) تبدیل صفحات دیتا-محور به Server Components و Hydration هوشمند (Server-first rendering)
+
+مسئله: dashboard الان use client است و با React Query روی کلاینت دیتا می‌گیرد — تا وقتی JS دانلود و mount نشود، UI منتظر می‌ماند. (صفحهٔ شما فعلاً client-side rendering برای این بخش انجام می‌دهد). 
+
+page
+
+چکار کنیم:
+
+صفحهٔ اصلی داشبورد را به server component تبدیل کنید که با fetch سرور به API (یا به route handler داخلی) درخواست می‌زند و نتایج را در سرور دریافت می‌کند. با این کار HTML اولیه همراه با دیتا ارسال شده و کاربر بدون JS یا با حداقل JS محتوای اولیه را می‌بیند.
+
+سپس اگر می‌خواهید تعاملات client داشته باشید (مثلاً دکمه‌ها، فیلترها، real-time)، یک کامپوننت client کوچک بسازید و آن را فقط برای آن بخش‌ها hydrate کنید و از initialData در React Query برای جلوگیری از refetch فوری استفاده کنید.
+
+3) کاهش bundle و code-splitting / lazy load (Medium impact)
+
+پیشنهادها:
+
+اجتناب از قرار دادن QueryClientProvider در RootLayout (همان‌طور که گفتم).
+
+آیکون‌ها: الان از lucide-react استفاده شده و آیکون‌ها جدا وارد شده‌اند (خوبه). اما اگر تعداد آیکون‌ها زیاد است، بررسی کنید که آیا همهٔ importها در یک فایل بزرگ می‌آیند یا spread شده‌اند. می‌توانید آیکون‌های بزرگ/کم‌استفاده را به dynamic import ببرید.
+
+ماژول‌های سنگین را dynamic import کنید (مثلاً جدول‌ها، ویرایشگرها یا نمودارها) تا در صفحه‌هایی که لازم نیست دانلود نشوند.
+
+4) Prefetching مسیرها و داده‌ها برای ناوبری لحظه‌ای (Very high ROI)
+
+مسئله: برای navigation آنی، علاوه بر prefetch کردن route (next/link معمولاً خودش prefetch می‌کند)، بهتر است داده‌های صفحه هدف را هم prefetch کنید تا وقتی کاربر کلیک کرد، داده آماده باشد.
+
+چکار کنیم: در لینک‌هایی که مهم هستند، هنگام onMouseEnter یا onFocus از queryClient.prefetchQuery استفاده کنید. مثال در Sidebar شما (که Link استفاده می‌کند):
+
+// داخل Sidebar (client component)
+<Link
+  href={item.href}
+  onMouseEnter={() => queryClient.prefetchQuery(['users', {page:1}], () => usersApi.list({page:1}))}
+>
+  ...
+</Link>
+
+
+اینِ کار باعث می‌شود وقتی کاربر موس را روی لینک می‌برد، دادهٔ صفحهٔ هدف prefetched شود و navigation آنی شود.
+
+
+5) Auth: از localStorage به Cookie HttpOnly (Security + SSR)
+
+مسئله: AuthProvider توکن را از localStorage می‌گیرد و سپس cookie می‌سازد؛ این الگو باعث می‌شود تا auth فقط در client شناخته شود و SSR بدون اطلاع از کاربر عمل کند. کد فعلی: خواندن localStorage و set cookie در useEffect. 
+
+auth
+
+چکار کنیم: بهترین راه این است که توکن دسترسی (access token) را در یک cookie HttpOnly نگه دارید (set توسط سرور بعد از login). این cookie به‌طور اتوماتیک در درخواست‌های سرور ارسال می‌شود و شما می‌توانید در Server Components با fetch، endpoint auth/me را فراخوانی کنید تا کاربر را authenticate و SSR را انجام دهید. مزایا:
+
+SSR می‌تواند user-specific HTML render کند،
+
+نیازی به JS برای شناساندن کاربر نیست → initial render بهتر،
+
+کاهش ریسک XSS (توکن در localStorage در برابر XSS آسیب‌پذیرتر است).
+
+نکتهٔ عملی: بعد از login، سرور response را با Set-Cookie: access_token=...; HttpOnly; Secure; SameSite=Lax برگرداند. سپس api client باید وقتی در client تماس می‌گیرد، از cookie برای auth استفاده کند (مرتب‌سازی header‌ها) یا برای SSR مستقیماً cookie در fetch server-side ارسال می‌شود.
+
+6) React Query — تنظیمات هوشمند کش (Low effort, high impact)
+
+در Providers مقدارهای پیش‌فرض React Query به‌صورت زیر تعریف شده که خوب است، اما می‌توانید موارد زیر را انجام دهید:
+
+برای داده‌های «نادر تغییر» مثل لیست نقش‌ها یا پرچم‌ها staleTime را بسیار بزرگ‌تر تنظیم کنید.
+
+برای داده‌هایی مثل dashboard که می‌خواهید real-time شوند، از refetchInterval یا ترکیب با WebSocket استفاده کنید.
+(جای تعریف: Providers در frontend/src/app/providers.tsx) 
+
+providers
+
+7) Real-time: websocket / SSE برای داشبورد و لاگ‌ها
+
+چکار کنیم:
+
+برای real-time ساده و کم‌هزینه از Server-Sent Events (SSE) یا WebSocket استفاده کنید.
+
+در کلاینت از یک small client socket (مثلاً ws یا socket.io-client) استفاده کنید و هر‌گاه event جدید آمد از queryClient.setQueryData(['dashboard-stats'], old => new) یا invalidateQueries استفاده کنید تا UI به‌روزرسانی شود بدون refetch کامل.
+
+اگر استفاده از بروزرسانی‌های خیلی زیاد مدنظر است، به جای refetch کامل فقط patchِ مورد نیاز را اعمال کنید (سرور فقط رویدادهای delta ارسال کند).
+
+نمونهٔ client-side subscription ساده با EventSource:
+
+// داخل یک client component
+useEffect(() => {
+  const es = new EventSource(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/dashboard/stream`, { withCredentials: true })
+  es.onmessage = (e) => {
+    const payload = JSON.parse(e.data)
+    queryClient.setQueryData(['dashboard-stats'], (old:any) => ({...old, ...payload}))
+  }
+  return () => es.close()
+}, [])
+
+8) API / Server-side optimizations (DB + cache + HTTP)
+
+نکات مهم سرور:
+
+Endpoints را با pagination/limit/fields پشتیبانی کنید تا پاسخ‌ها کوچک بمانند. (در api.ts شما از paginated endpoints استفاده می‌کنید که خوب است؛ اما سرور باید حتماً این داده‌ها را با limit پشتیبانی کند). 
+
+api
+
+برای داده‌هایی که گران محاسبه می‌شوند (مثل aggregated dashboard stats) از یک cache سطحی (Redis) استفاده کنید و با TTL مناسب (مثلاً 30s–60s) پاسخ دهید.
+
+تنظیم هدرهای Cache-Control, ETag, Last-Modified برای منابع استاتیک و APIهای غیر حساس.
+
+فعال کردن gzip/brotli و استفاده از CDN برای فایل‌های استاتیک (fonts/images/CSS/JS).
+
+9) اندازه فونت/وب‌فونت و layout shift
+
+شما از next/font برای برخی فونت‌ها استفاده کرده‌اید (خوب است) و برای Vazirmatn از @font-face با font-display: swap استفاده کرده‌اید؛ می‌توانید فونت‌های مهم را preload کنید تا CLS کمتر شود. (در globals.css فونت‌ها تعریف شده‌اند). 
+
+globals
+
+10) ابزارهای سنجش و گام‌های بعدی
+
+از next build && next start و @next/bundle-analyzer برای پیدا کردن بزرگ‌ترین بسته‌ها استفاده کنید.
+
+تست Lighthouse و WebPageTest برای بررسی FCP/TTI.
+
+اندازه JS اولیه با next build و next analyze بررسی شود.
+
+مانیتورینگ واقعی: Sentry / Datadog برای متریک‌های زمان پاسخ و نرخ خطا.

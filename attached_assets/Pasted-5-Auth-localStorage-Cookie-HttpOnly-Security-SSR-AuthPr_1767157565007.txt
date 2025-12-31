@@ -1,0 +1,78 @@
+5) Auth: از localStorage به Cookie HttpOnly (Security + SSR)
+
+مسئله: AuthProvider توکن را از localStorage می‌گیرد و سپس cookie می‌سازد؛ این الگو باعث می‌شود تا auth فقط در client شناخته شود و SSR بدون اطلاع از کاربر عمل کند. کد فعلی: خواندن localStorage و set cookie در useEffect. 
+
+auth
+
+چکار کنیم: بهترین راه این است که توکن دسترسی (access token) را در یک cookie HttpOnly نگه دارید (set توسط سرور بعد از login). این cookie به‌طور اتوماتیک در درخواست‌های سرور ارسال می‌شود و شما می‌توانید در Server Components با fetch، endpoint auth/me را فراخوانی کنید تا کاربر را authenticate و SSR را انجام دهید. مزایا:
+
+SSR می‌تواند user-specific HTML render کند،
+
+نیازی به JS برای شناساندن کاربر نیست → initial render بهتر،
+
+کاهش ریسک XSS (توکن در localStorage در برابر XSS آسیب‌پذیرتر است).
+
+نکتهٔ عملی: بعد از login، سرور response را با Set-Cookie: access_token=...; HttpOnly; Secure; SameSite=Lax برگرداند. سپس api client باید وقتی در client تماس می‌گیرد، از cookie برای auth استفاده کند (مرتب‌سازی header‌ها) یا برای SSR مستقیماً cookie در fetch server-side ارسال می‌شود.
+
+6) React Query — تنظیمات هوشمند کش (Low effort, high impact)
+
+در Providers مقدارهای پیش‌فرض React Query به‌صورت زیر تعریف شده که خوب است، اما می‌توانید موارد زیر را انجام دهید:
+
+برای داده‌های «نادر تغییر» مثل لیست نقش‌ها یا پرچم‌ها staleTime را بسیار بزرگ‌تر تنظیم کنید.
+
+برای داده‌هایی مثل dashboard که می‌خواهید real-time شوند، از refetchInterval یا ترکیب با WebSocket استفاده کنید.
+(جای تعریف: Providers در frontend/src/app/providers.tsx) 
+
+providers
+
+7) Real-time: websocket / SSE برای داشبورد و لاگ‌ها
+
+چکار کنیم:
+
+برای real-time ساده و کم‌هزینه از Server-Sent Events (SSE) یا WebSocket استفاده کنید.
+
+در کلاینت از یک small client socket (مثلاً ws یا socket.io-client) استفاده کنید و هر‌گاه event جدید آمد از queryClient.setQueryData(['dashboard-stats'], old => new) یا invalidateQueries استفاده کنید تا UI به‌روزرسانی شود بدون refetch کامل.
+
+اگر استفاده از بروزرسانی‌های خیلی زیاد مدنظر است، به جای refetch کامل فقط patchِ مورد نیاز را اعمال کنید (سرور فقط رویدادهای delta ارسال کند).
+
+نمونهٔ client-side subscription ساده با EventSource:
+
+// داخل یک client component
+useEffect(() => {
+  const es = new EventSource(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/dashboard/stream`, { withCredentials: true })
+  es.onmessage = (e) => {
+    const payload = JSON.parse(e.data)
+    queryClient.setQueryData(['dashboard-stats'], (old:any) => ({...old, ...payload}))
+  }
+  return () => es.close()
+}, [])
+
+8) API / Server-side optimizations (DB + cache + HTTP)
+
+نکات مهم سرور:
+
+Endpoints را با pagination/limit/fields پشتیبانی کنید تا پاسخ‌ها کوچک بمانند. (در api.ts شما از paginated endpoints استفاده می‌کنید که خوب است؛ اما سرور باید حتماً این داده‌ها را با limit پشتیبانی کند). 
+
+api
+
+برای داده‌هایی که گران محاسبه می‌شوند (مثل aggregated dashboard stats) از یک cache سطحی (Redis) استفاده کنید و با TTL مناسب (مثلاً 30s–60s) پاسخ دهید.
+
+تنظیم هدرهای Cache-Control, ETag, Last-Modified برای منابع استاتیک و APIهای غیر حساس.
+
+فعال کردن gzip/brotli و استفاده از CDN برای فایل‌های استاتیک (fonts/images/CSS/JS).
+
+9) اندازه فونت/وب‌فونت و layout shift
+
+شما از next/font برای برخی فونت‌ها استفاده کرده‌اید (خوب است) و برای Vazirmatn از @font-face با font-display: swap استفاده کرده‌اید؛ می‌توانید فونت‌های مهم را preload کنید تا CLS کمتر شود. (در globals.css فونت‌ها تعریف شده‌اند). 
+
+globals
+
+10) ابزارهای سنجش و گام‌های بعدی
+
+از next build && next start و @next/bundle-analyzer برای پیدا کردن بزرگ‌ترین بسته‌ها استفاده کنید.
+
+تست Lighthouse و WebPageTest برای بررسی FCP/TTI.
+
+اندازه JS اولیه با next build و next analyze بررسی شود.
+
+مانیتورینگ واقعی: Sentry / Datadog برای متریک‌های زمان پاسخ و نرخ خطا.
