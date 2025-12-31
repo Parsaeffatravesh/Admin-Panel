@@ -14,6 +14,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -44,6 +45,7 @@ type AuthService struct {
 	auditRepo       *repository.AuditLogRepository
 	jwtConfig       config.JWTConfig
 	permissionCache sync.Map
+	logger          zerolog.Logger
 }
 
 func NewAuthService(
@@ -52,6 +54,7 @@ func NewAuthService(
 	sessionRepo *repository.SessionRepository,
 	auditRepo *repository.AuditLogRepository,
 	jwtConfig config.JWTConfig,
+	logger zerolog.Logger,
 ) *AuthService {
 	return &AuthService{
 		userRepo:    userRepo,
@@ -59,6 +62,7 @@ func NewAuthService(
 		sessionRepo: sessionRepo,
 		auditRepo:   auditRepo,
 		jwtConfig:   jwtConfig,
+		logger:      logger,
 	}
 }
 
@@ -74,17 +78,20 @@ type LoginResponse struct {
 
 func (s *AuthService) Login(ctx context.Context, req *LoginRequest, ipAddress, userAgent string) (*LoginResponse, error) {
 	// Lowercase email before lookup
-	email := strings.ToLower(req.Email)
+	email := strings.ToLower(strings.TrimSpace(req.Email))
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
+		s.logLoginFailure(ctx, nil, email, ipAddress, userAgent)
 		return nil, ErrInvalidCredentials
 	}
 
 	if user.Status != "active" {
+		s.logLoginFailure(ctx, user, email, ipAddress, userAgent)
 		return nil, ErrUserInactive
 	}
 
 	if !utils.CheckPasswordHash(req.Password, user.PasswordHash) {
+		s.logLoginFailure(ctx, user, email, ipAddress, userAgent)
 		return nil, ErrInvalidCredentials
 	}
 
@@ -126,6 +133,30 @@ func (s *AuthService) Login(ctx context.Context, req *LoginRequest, ipAddress, u
 		User:   user,
 		Tokens: tokens,
 	}, nil
+}
+
+func (s *AuthService) logLoginFailure(ctx context.Context, user *models.User, email, ipAddress, userAgent string) {
+	now := time.Now()
+	if user != nil {
+		s.auditRepo.Log(ctx, &models.AuditLog{
+			ID:        uuid.New(),
+			TenantID:  user.TenantID,
+			UserID:    &user.ID,
+			Action:    "login_failed",
+			Resource:  "auth",
+			IPAddress: ipAddress,
+			UserAgent: userAgent,
+			CreatedAt: now,
+		})
+		return
+	}
+
+	s.logger.Warn().
+		Str("email", email).
+		Str("ip_address", ipAddress).
+		Str("user_agent", userAgent).
+		Time("timestamp", now).
+		Msg("login failed")
 }
 
 func (s *AuthService) Logout(ctx context.Context, userID uuid.UUID, ipAddress, userAgent string) error {
